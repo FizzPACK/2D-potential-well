@@ -81,11 +81,13 @@
                 float accel = sump * GRAVITY_CONSTANT;
 
                 // Dynamics
-                heightmapValue.y += accel;
-                heightmapValue.x += heightmapValue.y * deltaTime;
+                //heightmapValue.y += accel;
+                //heightmapValue.x += 0; 
+                //heightmapValue.y * deltaTime;
 
                 // Viscosity
-                heightmapValue.x += sump * viscosityConstant;
+                //heightmapValue.x += 0; 
+                //sump * viscosityConstant;
 
                 // Mouse influence
                 float mousePhase = clamp( length( ( uv - vec2( 0.5 ) ) * BOUNDS - vec2( mousePos.x, - mousePos.y ) ) * PI / mouseSize, 0.0, PI );
@@ -325,11 +327,19 @@
 
 
                 initWater();
+                
+                initBall();
 
                 valuesChanger();
 
             }
-
+            
+            function initBall(){
+                var geometry = new THREE.SphereGeometry( 5, 32, 32 );
+                var material = new THREE.MeshBasicMaterial( {color: 0xffff00} );
+                var sphere = new THREE.Mesh( geometry, material );
+                scene.add( sphere ); 
+            }
 
             function initWater() {
 
