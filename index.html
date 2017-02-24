@@ -228,6 +228,10 @@
             var heightmapVariable;
             var waterUniforms;
             var smoothShader;
+            var heightmap0; 
+            var sphere;
+            var balls = [];
+            var mouseClicked;
 
             var simplex = new SimplexNoise();
 
@@ -337,7 +341,12 @@
             function initBall(){
                 var geometry = new THREE.SphereGeometry( 5, 32, 32 );
                 var material = new THREE.MeshBasicMaterial( {color: 0xffff00} );
-                var sphere = new THREE.Mesh( geometry, material );
+                sphere = new THREE.Mesh( geometry, material );
+                var velocity = {};
+                velocity.x = 0;
+                velocity.z = 0;
+                sphere.velocity = velocity;
+                balls.push( sphere )
                 scene.add( sphere ); 
             }
 
@@ -399,7 +408,7 @@
 
                 gpuCompute = new GPUComputationRenderer( WIDTH, WIDTH, renderer );
 
-                var heightmap0 = gpuCompute.createTexture();
+                heightmap0 = gpuCompute.createTexture();
 
                 fillTexture( heightmap0 );
 
@@ -420,6 +429,7 @@
                 // Create compute shader to smooth the water surface and velocity
                 smoothShader = gpuCompute.createShaderMaterial( document.getElementById( 'smoothFragmentShader' ).textContent, { texture: { value: null } } );
 
+                waterUniforms.heightmap.value = gpuCompute.getCurrentRenderTarget( heightmapVariable ).texture;
             }
 
             function fillTexture( texture ) {
@@ -444,10 +454,11 @@
                 for ( var j = 0; j < WIDTH; j++ ) {
                     for ( var i = 0; i < WIDTH; i++ ) {
 
-                        var x = i * 128 / WIDTH;
-                        var y = j * 128 / WIDTH;
-
-                            pixels[ p + 0 ] = noise( x, y, 123.4 );
+                        var x = (i-WIDTH/2) * 128 / WIDTH;
+                        var y = (j-WIDTH/2) * 128 / WIDTH;
+                            
+                        //pixels[ p + 0 ] = noise(x,y,123.4);
+                        pixels[ p + 0 ] = (x*x+y*y)/WIDTH*10;
                         pixels[ p + 1 ] = 0;
                         pixels[ p + 2 ] = 0;
                         pixels[ p + 3 ] = 1;
@@ -501,6 +512,19 @@
 
             }
 
+            function setMouseClick( x, y ) {
+
+                mouseCoords.set( ( x / renderer.domElement.clientWidth ) * 2 - 1, - ( y / renderer.domElement.clientHeight ) * 2 + 1 );
+                mouseClicked = true;
+
+            }
+
+            function onDocumentMouseUp( event ) {
+
+                setMouseClick( event.clientX, event.clientY );
+
+            }
+
             function onDocumentTouchStart( event ) {
 
                 if ( event.touches.length === 1 ) {
@@ -530,14 +554,46 @@
             function animate() {
 
                 requestAnimationFrame( animate );
-
+               
                 render();
                 stats.update();
+                console.log
+            }
 
+            function simulationStep(){
+                var temp_fx, temp_fz;
+                var temp_x, temp_z;
+                var scale = 5000;
+                var dt = 0.001;
+                var potentialGrid = heightmap0.image.data;
+
+                for (var count=0; count < balls.length; count++){
+                    temp_x = Math.floor(balls[count].position.x) + BOUNDS/2;
+                    temp_z = Math.floor(balls[count].position.z) + BOUNDS/2;
+
+                    p0 = ((temp_z*BOUNDS)+temp_x)*4;
+                    pz = (((temp_z+1)*BOUNDS)+temp_x)*4; 
+                    px = ((temp_z*BOUNDS)+(temp_x+1))*4;
+
+                    temp_fx = potentialGrid[p0]-potentialGrid[px];
+                    temp_fz = potentialGrid[p0]-potentialGrid[pz];
+
+                    temp_fx = temp_fx*scale;                    
+                    temp_fz = temp_fz*scale;
+
+                    balls[count].velocity.x = balls[count].velocity.x + temp_fx*dt;
+                    balls[count].velocity.z = balls[count].velocity.z + temp_fz*dt;
+
+                    balls[count].position.x =  balls[count].position.x + balls[count].velocity.x*dt;
+                    balls[count].position.z =  balls[count].position.z + balls[count].velocity.z*dt;       
+
+                    balls[count].position.y =  potentialGrid[p0];       
+                }
             }
 
             function render() {
-
+                
+                simulationStep();
                 // Set uniforms: mouse interaction
                 var uniforms = heightmapVariable.material.uniforms;
                 if ( mouseMoved ) {
@@ -562,13 +618,13 @@
                 }
 
                 // Do the gpu computation
-                gpuCompute.compute();
+                //gpuCompute.compute();
 
                 // Get compute output in custom uniform
-                waterUniforms.heightmap.value = gpuCompute.getCurrentRenderTarget( heightmapVariable ).texture;
-
+                //var val = gpuCompute.getCurrentRenderTarget( heightmapVariable )
                 // Render
                 renderer.render( scene, camera );
+                //console.log(val[0])
 
             }
 
