@@ -465,11 +465,11 @@
                 for ( var j = 0; j < WIDTH; j++ ) {
                     for ( var i = 0; i < WIDTH; i++ ) {
 
-                        var x = (i-WIDTH/2);
-                        var y = (j-WIDTH/2) ;
+                        var x = (i-WIDTH/2)/WIDTH*2;
+                        var y = (j-WIDTH/2)/WIDTH*2;
                             
                         //pixels[ p + 0 ] = noise(x,y,123.4);
-                        pixels[ p + 0 ] = (x*x+y*y)/WIDTH/WIDTH*200;
+                        pixels[ p + 0 ] =  (x*x+y*y) > 0.05 ? 200-1/(x*x+y*y)*10 : 0;
                         pixels[ p + 1 ] = 0;
                         pixels[ p + 2 ] = 0;
                         pixels[ p + 3 ] = 1;
