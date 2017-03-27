@@ -340,7 +340,11 @@ function GPUComputationRenderer( sizeX, sizeY, renderer ) {
 		mesh.material = passThruShader;
 
 	};
-
+    
+    this.getOutput = function(x, y, width, height, buf) {
+        var gl = renderer.context;
+        gl.readPixels(x,y,width,height,gl.RGBA,gl.FLOAT,buf)
+    };
 	// Shaders
 
 	function getPassThroughVertexShader() {

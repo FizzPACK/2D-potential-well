@@ -588,7 +588,9 @@
                     p0 = ((temp_z*BOUNDS)+temp_x)*4;
                     pz = (((temp_z+1)*BOUNDS)+temp_x)*4; 
                     px = ((temp_z*BOUNDS)+(temp_x+1))*4;
-
+                    
+                    //var temp_pot = getPotentialTile()
+                      
                     temp_fx = potentialGrid[p0]-potentialGrid[px];
                     temp_fz = potentialGrid[p0]-potentialGrid[pz];
 
@@ -660,9 +662,18 @@
 
                     }
                 }
-
-
             }
+            
+            function getPotentialTile(x, y){
+                // Returns 4 length array of the potential at the specified point
+                var buf = new Float32Array(2*2*4);
+                gpuCompute.getOutput(x, y, 2, 2, buf);
+                var out = []; 
+                for(var i = 0; i < 2*2; i++){
+                    out.push(buf[i*4]);
+                }
+                return out;
+            }          
 
             function render() {
                 
@@ -691,10 +702,15 @@
                 }
 
                 // Do the gpu computation
-                //gpuCompute.compute();
-
+                gpuCompute.compute();
+                 
                 // Get compute output in custom uniform
-                //var val = gpuCompute.getCurrentRenderTarget( heightmapVariable )
+                var val = gpuCompute.getCurrentRenderTarget( heightmapVariable );
+                /*
+                var buf = new Float32Array(2*2*4);
+                gpuCompute.getOutput(10, 10, 2, 2, buf);
+                */
+                console.log(getPotentialTile(20, 20));
                 // Render
                 renderer.render( scene, camera );
                 //console.log(val[0])
