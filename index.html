@@ -465,11 +465,11 @@
                 for ( var j = 0; j < WIDTH; j++ ) {
                     for ( var i = 0; i < WIDTH; i++ ) {
 
-                        var x = (i-WIDTH/2)/WIDTH*2;
-                        var y = (j-WIDTH/2)/WIDTH*2;
+                        var x = (i-WIDTH/2);
+                        var y = (j-WIDTH/2) ;
                             
                         //pixels[ p + 0 ] = noise(x,y,123.4);
-                        pixels[ p + 0 ] =  (x*x+y*y) > 0.05 ? 200-1/(x*x+y*y)*10 : 0;
+                        pixels[ p + 0 ] = (x*x+y*y)/WIDTH/WIDTH*200;
                         pixels[ p + 1 ] = 0;
                         pixels[ p + 2 ] = 0;
                         pixels[ p + 3 ] = 1;
@@ -568,6 +568,7 @@
                
                 render();
                 stats.update();
+                console.log
             }
 
             function simulationStep(){
@@ -587,11 +588,9 @@
                     p0 = ((temp_z*BOUNDS)+temp_x)*4;
                     pz = (((temp_z+1)*BOUNDS)+temp_x)*4; 
                     px = ((temp_z*BOUNDS)+(temp_x+1))*4;
-                    //console.log(temp_x) 
-                    var temp_pot = getPotentialTile(temp_x, temp_z);
-                    //console.log(temp_pot); 
-                    temp_fx = temp_pot[2]-temp_pot[3]; //potentialGrid[p0]-potentialGrid[px];
-                    temp_fz = temp_pot[3]-temp_pot[1]; //potentialGrid[p0]-potentialGrid[pz];
+
+                    temp_fx = potentialGrid[p0]-potentialGrid[px];
+                    temp_fz = potentialGrid[p0]-potentialGrid[pz];
 
                     temp_fx = temp_fx*scale;                    
                     temp_fz = temp_fz*scale;
@@ -602,7 +601,7 @@
                     balls[count].position.x =  balls[count].position.x + balls[count].velocity.x*dt;
                     balls[count].position.z =  balls[count].position.z + balls[count].velocity.z*dt;       
 
-                    balls[count].position.y =  temp_pot[3];       
+                    balls[count].position.y =  potentialGrid[p0];       
                 }
             }
 
@@ -661,22 +660,13 @@
 
                     }
                 }
+
+
             }
-            
-            function getPotentialTile(x, y){
-                // Returns 4 length array of the potential at the specified point
-                y = BOUNDS - y;
-                var buf = new Float32Array(2*2*4);
-                gpuCompute.getOutput(x, y, 2, 2, buf);
-                var out = []; 
-                for(var i = 0; i < 2*2; i++){
-                    out.push(buf[i*4]);
-                }
-                return out;
-            }          
 
             function render() {
                 
+                simulationStep();
                 // Set uniforms: mouse interaction
                 var uniforms = heightmapVariable.material.uniforms;
                 if ( mouseMoved ) {
@@ -701,22 +691,10 @@
                 }
 
                 // Do the gpu computation
-                gpuCompute.compute();
-                simulationStep();
-                 
-                // Get compute output in custom uniform
-                var val = gpuCompute.getCurrentRenderTarget( heightmapVariable );
-                /*
+                //gpuCompute.compute();
 
-                console.log('20, 500')
-                console.log(getPotentialTile(20, 500));
-                console.log('500, 500')
-                console.log(getPotentialTile(500, 500));
-                console.log('500, 20')
-                console.log(getPotentialTile(500, 20));
-                console.log('20, 20')
-                console.log(getPotentialTile(20, 20));
-                */
+                // Get compute output in custom uniform
+                //var val = gpuCompute.getCurrentRenderTarget( heightmapVariable )
                 // Render
                 renderer.render( scene, camera );
                 //console.log(val[0])
