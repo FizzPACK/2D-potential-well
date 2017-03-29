@@ -229,7 +229,7 @@
             var waterUniforms;
             var smoothShader;
             var heightmap0; 
-            //var sphere;
+            var sphere;
             var balls = [];
             var mouseClicked;
 
@@ -332,32 +332,21 @@
 
                 initWater();
                 
-                initBall(20,0,20,0,-400,2);
-                initBall(10,0,-20, 0, 400,3);
+                initBall();
 
                 valuesChanger();
 
             }
-
-
             
-            function initBall(ma,x0,z0, v0x, v0z,r){
-                var geometry = new THREE.SphereGeometry( r, 32, 32 );
+            function initBall(){
+                var geometry = new THREE.SphereGeometry( 5, 32, 32 );
                 var material = new THREE.MeshBasicMaterial( {color: 0xffff00} );
-                var sphere = new THREE.Mesh( geometry, material );
+                sphere = new THREE.Mesh( geometry, material );
                 var velocity = {};
-                
-                velocity.x = v0x;
-                velocity.z = v0z;
-
-                
-                sphere.radius = r;
-                sphere.position.x = x0;
-                sphere.position.z = z0;
-                sphere.mass = ma;
-
+                velocity.x = 0;
+                velocity.z = 0;
                 sphere.velocity = velocity;
-                balls.push( sphere ),
+                balls.push( sphere )
                 scene.add( sphere ); 
             }
 
@@ -572,9 +561,6 @@
             }
 
             function simulationStep(){
-
-                forceStep();
-
                 var temp_fx, temp_fz;
                 var temp_x, temp_z;
                 var scale = 5000;
@@ -603,65 +589,6 @@
 
                     balls[count].position.y =  potentialGrid[p0];       
                 }
-            }
-
-
-
-            function forceStep(){
-                var temp_fx;
-                var temp_fz;
-                var scale = 0;
-                var rx,rz,r;
-
-                for(var i = 0; i < balls.length; i++){
-                    for(var j = i+1; j < balls.length; j++){
-                       
-                        rx = (balls[i].position.x - balls[j].position.x);
-                        rz = (balls[i].position.z - balls[j].position.z);
-                        r = Math.sqrt(rx*rx + rz*rz);
-                        R_s = balls[i].radius + balls[j].radius;
-                        //Gravitational Force
-                        
-                        if(r>R_s){
-                            temp_fx = balls[j].mass*rx/(r*r*r);
-                            temp_fz = balls[j].mass*rz/(r*r*r);
-
-
-                            balls[i].velocity.x = balls[i].velocity.x - temp_fx*scale;
-                            balls[i].velocity.z = balls[i].velocity.z - temp_fz*scale;
-
-                            balls[j].velocity.x = balls[j].velocity.x + temp_fx*scale;
-                            balls[j].velocity.z = balls[j].velocity.z + temp_fz*scale;
-                        }else{
-                            var v1x, v1y, v2x,v2y,m1,m2;
-
-                            v1x = balls[i].velocity.x;
-                            v1y = balls[i].velocity.z;
-                            m1 = balls[i].mass;
-
-                            v2x = balls[j].velocity.x;
-                            v2y = balls[j].velocity.z;
-                            m2 = balls[j].mass;
-
-                            balls[i].velocity.x = v1x - 2*m2*((v1y-v2y)*rz+rx*(v1x-v2x))*rx/(m1+m2)/(r*r);
-                            balls[i].velocity.z = v1y - 2*m2*((v1y-v2y)*rz+rx*(v1x-v2x))*rz/(m1+m2)/(r*r);
-                            
-                            balls[j].velocity.x = v2x + 2*m1*((v1y-v2y)*rz+rx*(v1x-v2x))*rx/(m1+m2)/(r*r);
-                            balls[j].velocity.z = v2y + 2*m1*((v1y-v2y)*rz+rx*(v1x-v2x))*rz/(m1+m2)/(r*r);
-                            
-                            balls[i].position.x = balls[j].position.x+R_s*rx ;
-                            balls[i].position.y = balls[j].position.x+R_s*rz ;
-                            
-
-
-                        }
-
-                        
-
-                    }
-                }
-
-
             }
 
             function render() {
@@ -700,8 +627,6 @@
                 //console.log(val[0])
 
             }
-
-
 
         </script>
     </body>
