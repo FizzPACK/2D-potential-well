@@ -329,6 +329,26 @@
                 };
                 gui.add( buttonSmooth, 'smoothWater' );
 
+                var particle_addition = function() {
+                // Define default values here
+                    this.ma = 0;
+                    this.x = 10;
+                    this.z = 0;
+                    this.vx = 0;
+                    this.vz = 0;
+                    this.r = 0;
+                    this.add = function() { initBall(this.ma,this.x,this.z,this.vx,this.vz,this.r);};
+                };
+                var particle = new particle_addition();
+                var f1 = gui.addFolder('Particle Properties');
+                f1.add(particle, 'ma');
+                f1.add(particle, 'x');
+                f1.add(particle, 'z');
+                f1.add(particle, 'vx');
+                f1.add(particle, 'vz');
+                f1.add(particle, 'r');
+                f1.add(particle, 'add');
+                gui.remember(f1);
 
                 initWater();
                 
