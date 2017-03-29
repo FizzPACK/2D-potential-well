@@ -332,20 +332,25 @@
 
                 initWater();
                 
-                initBall();
+                initBall(20,0,20,0,-400,2);
+                initBall(10,0,-20, 0, 400,3);
 
                 valuesChanger();
 
             }
             
-            function initBall(){
-                var geometry = new THREE.SphereGeometry( 5, 32, 32 );
+             function initBall(ma,x0,z0, v0x, v0z,r){
+                var geometry = new THREE.SphereGeometry( r, 32, 32 );
                 var material = new THREE.MeshBasicMaterial( {color: 0xffff00} );
-                sphere = new THREE.Mesh( geometry, material );
+                var sphere = new THREE.Mesh( geometry, material );
                 var velocity = {};
-                velocity.x = 0;
-                velocity.z = 0;
-                sphere.velocity = velocity;
+                velocity.x = v0x;
+                velocity.z = v0z;
+                sphere.velocity = velocity;                
+                sphere.radius = r;
+                sphere.position.x = x0;
+                sphere.position.z = z0;
+                sphere.mass = ma;
                 balls.push( sphere )
                 scene.add( sphere ); 
             }
@@ -561,6 +566,9 @@
             }
 
             function simulationStep(){
+
+            	forceStep();
+                
                 var temp_fx, temp_fz;
                 var temp_x, temp_z;
                 var scale = 5000;
@@ -588,8 +596,6 @@
                     balls[count].position.z =  balls[count].position.z + balls[count].velocity.z*dt;       
 
                     balls[count].position.y =  potentialGrid[p0];       
-<<<<<<< HEAD
-=======
                 }
             }
 
@@ -647,7 +653,6 @@
                         
 
                     }
->>>>>>> parent of f1ffa66... Add files via upload
                 }
 
 
