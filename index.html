@@ -588,7 +588,69 @@
                     balls[count].position.z =  balls[count].position.z + balls[count].velocity.z*dt;       
 
                     balls[count].position.y =  potentialGrid[p0];       
+<<<<<<< HEAD
+=======
                 }
+            }
+
+
+
+            function forceStep(){
+                var temp_fx;
+                var temp_fz;
+                var scale = 0;
+                var rx,rz,r;
+
+                for(var i = 0; i < balls.length; i++){
+                    for(var j = i+1; j < balls.length; j++){
+                       
+                        rx = (balls[i].position.x - balls[j].position.x);
+                        rz = (balls[i].position.z - balls[j].position.z);
+                        r = Math.sqrt(rx*rx + rz*rz);
+                        R_s = balls[i].radius + balls[j].radius;
+                        //Gravitational Force
+                        
+                        if(r>R_s){
+                            temp_fx = balls[j].mass*rx/(r*r*r);
+                            temp_fz = balls[j].mass*rz/(r*r*r);
+
+
+                            balls[i].velocity.x = balls[i].velocity.x - temp_fx*scale;
+                            balls[i].velocity.z = balls[i].velocity.z - temp_fz*scale;
+
+                            balls[j].velocity.x = balls[j].velocity.x + temp_fx*scale;
+                            balls[j].velocity.z = balls[j].velocity.z + temp_fz*scale;
+                        }else{
+                            var v1x, v1y, v2x,v2y,m1,m2;
+
+                            v1x = balls[i].velocity.x;
+                            v1y = balls[i].velocity.z;
+                            m1 = balls[i].mass;
+
+                            v2x = balls[j].velocity.x;
+                            v2y = balls[j].velocity.z;
+                            m2 = balls[j].mass;
+
+                            balls[i].velocity.x = v1x - 2*m2*((v1y-v2y)*rz+rx*(v1x-v2x))*rx/(m1+m2)/(r*r);
+                            balls[i].velocity.z = v1y - 2*m2*((v1y-v2y)*rz+rx*(v1x-v2x))*rz/(m1+m2)/(r*r);
+                            
+                            balls[j].velocity.x = v2x + 2*m1*((v1y-v2y)*rz+rx*(v1x-v2x))*rx/(m1+m2)/(r*r);
+                            balls[j].velocity.z = v2y + 2*m1*((v1y-v2y)*rz+rx*(v1x-v2x))*rz/(m1+m2)/(r*r);
+                            
+                            balls[i].position.x = balls[j].position.x+R_s*rx ;
+                            balls[i].position.y = balls[j].position.x+R_s*rz ;
+                            
+
+
+                        }
+
+                        
+
+                    }
+>>>>>>> parent of f1ffa66... Add files via upload
+                }
+
+
             }
 
             function render() {
