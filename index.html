@@ -325,7 +325,7 @@
 
                 gui.add( effectController, "mouseSize", 1.0, 100.0, 1.0 ).onChange( valuesChanger );
                 gui.add( effectController, "viscosity", 0.0, 0.1, 0.001 ).onChange( valuesChanger );
-                gui.add(obj, "winner");
+                
                
                 var buttonSmooth = {
                     smoothWater: function() {
@@ -352,6 +352,7 @@
                 f1.add(particle, 'vx');
                 f1.add(particle, 'vz');
                 f1.add(particle, 'r');
+                fl.add(particle, 'trace path');
                 f1.add(particle, 'add');
                 gui.remember(f1);
 
