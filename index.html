@@ -353,9 +353,9 @@
                         waterUniforms.heightmap.value = gpuCompute.getCurrentRenderTarget( heightmapVariable ).texture; 
                     };
 
-                    this.noise = function() { 
+                    this.zero = function() { 
                         heightmap0 = gpuCompute.createTexture();
-                        fillTexture(heightmap0,'noise');
+                        fillTexture(heightmap0,'zero');
                         gpuCompute.changeInitialValue(heightmap0);
                         var error = gpuCompute.init();
                         if ( error !== null ) {
@@ -367,12 +367,13 @@
 
                         waterUniforms.heightmap.value = gpuCompute.getCurrentRenderTarget( heightmapVariable ).texture; 
                     };
+
                 };
 
                 var myModels = new models();
                 var f0 = gui.addFolder('Pre-set Models');
+                f0.add(myModels,'zero');
                 f0.add(myModels,'well');
-                f0.add(myModels,'noise');
 
 
                 var particle_addition = function() {
@@ -523,15 +524,13 @@
             }
 
             function fillTexture( texture , func) {
-                if(func=='noise'){
+
+                if(func=='zero'){
                     var pixels = texture.image.data;
 
                     var p = 0;
                     for ( var j = 0; j < WIDTH; j++ ) {
                         for ( var i = 0; i < WIDTH; i++ ) {
-
-                            var x = (i-WIDTH/2)/WIDTH*2;
-                            var y = (j-WIDTH/2)/WIDTH*2;
                                 
                             //pixels[ p + 0 ] = noise(x,y,123.4);
                             pixels[ p + 0 ] = 0;
