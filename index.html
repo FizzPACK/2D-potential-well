@@ -338,7 +338,17 @@
                
                 var models = function() {
                 // Define models here
-                    this.well = function() { };
+                    this.well = function() { 
+
+                        var error = gpuCompute.init();
+                        if ( error !== null ) {
+                            console.error( error );
+                        }
+                                
+                        // Create compute shader to smooth the water surface and velocity
+                        smoothShader = gpuCompute.createShaderMaterial( document.getElementById( 'smoothFragmentShader' ).textContent, { texture: { value: null } } );
+
+                        waterUniforms.heightmap.value = gpuCompute.getCurrentRenderTarget( heightmapVariable ).texture; };
                 };
 
                 var myModels = new models();
