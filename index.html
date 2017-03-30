@@ -338,17 +338,7 @@
                
                 var models = function() {
                 // Define models here
-                    this.well = function() {
-                         var error = gpuCompute.init();
-                        if ( error !== null ) {
-                            console.error( error );
-                        }
-                                
-                        // Create compute shader to smooth the water surface and velocity
-                        smoothShader = gpuCompute.createShaderMaterial( document.getElementById( 'smoothFragmentShader' ).textContent, { texture: { value: null } } );
-
-                        waterUniforms.heightmap.value = gpuCompute.getCurrentRenderTarget( heightmapVariable ).texture;
-                    };
+                    this.well = function() { };
                 };
 
                 var myModels = new models();
@@ -666,12 +656,23 @@
                 }
             }
 
-
+            function calcAngularMom(){
+                
+                var sum = 0;
+                
+                for(var i = 0; i < balls.length; i++){
+                    var temp = (balls[i].position.x * balls[i].mass * balls[i].velocity.z) - (balls[i].position.z * balls[i].mass * balls[i].velocity.x);
+                    sum += temp;
+                }
+                
+                return sum;
+                
+            }
 
             function forceStep(){
                 var temp_fx;
                 var temp_fz;
-                var scale = 256;
+                var scale = WIDTH/2;
                 var rx,rz,r;
 
                 for(var i = 0; i < balls.length; i++){
