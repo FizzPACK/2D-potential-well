@@ -99,6 +99,54 @@
 
         </script>
 
+        <script id="heightmapAddParticleShader" type="x-shader/x-fragment">
+
+            #include <common>
+            
+            // x,z,param,param
+            uniform int numPotentials; 
+            uniform vec4 potentialInfo[ 2 ];
+
+            #define deltaTime ( 1.0 / 60.0 )
+
+            void main() {
+
+                vec2 cellSize = 1.0 / resolution.xy;
+
+                vec2 uv = gl_FragCoord.xy * cellSize;
+
+                vec4 heightmapValue = texture2D( heightmap, uv );
+
+                float sump = north.x + south.x + east.x + west.x - 4.0 * heightmapValue.x;
+
+                
+                for(int i = 0; i < numPotentials; i++){
+                    // Calculate the distance
+                    float dist = length( ( uv - vec2( 0.5 ) ) * BOUNDS - vec2( potentialInfo[i].x, - potentialInfo[i].y ) );
+                    dist = clamp(dist, 4.0, BOUNDS)/BOUNDS*2.0;  
+                    // Calculate the potential
+                    pot = - 10.0/dist; 
+                    // add the potential
+                    heightmapValue += pot; 
+                } 
+                // Dynamics
+                //heightmapValue.y += accel;
+                //heightmapValue.x += 0; 
+                //heightmapValue.y * deltaTime;
+
+                // Viscosity
+                //heightmapValue.x += 0; 
+                //sump * viscosityConstant;
+
+                // Mouse influence
+
+                gl_FragColor = heightmapValue;
+
+            }
+
+        </script>
+
+
         <!-- This is just a smoothing 'compute shader' for using manually: -->
         <script id="smoothFragmentShader" type="x-shader/x-fragment">
 
@@ -442,15 +490,25 @@
                 heightmap0 = gpuCompute.createTexture();
 
                 fillTexture( heightmap0 );
-
+                
+                // Define GPU variables:
                 heightmapVariable = gpuCompute.addVariable( "heightmap", document.getElementById( 'heightmapFragmentShader' ).textContent, heightmap0 );
-
+                heightmapVariable1 = gpuCompute.addVariable( "heightmap1", document.getElementById( 'heightmapAddParticleShader' ).textContent, heightmap0 );
+                
+                // Define GPU variable dependencies
                 gpuCompute.setVariableDependencies( heightmapVariable, [ heightmapVariable ] );
-
+                gpuCompute.setVariableDependencies( heightmapVariable1, [ heightmapVariable ] );
+                
+                // Initialize uniforms
                 heightmapVariable.material.uniforms.mousePos = { value: new THREE.Vector2( 10000, 10000 ) };
                 heightmapVariable.material.uniforms.mouseSize = { value: 20.0 };
                 heightmapVariable.material.uniforms.viscosityConstant = { value: 0.03 };
                 heightmapVariable.material.defines.BOUNDS = BOUNDS.toFixed( 1 );
+
+                heightmapVariable1.material.uniforms.potentialInfo = { value: [ new THREE.Vector4( 0.0, 0.0, 9.0, 0.0 ), new THREE.Vector4( 50.0, 50.0, 5, 0 ) ] };
+                heightmapVariable1.material.uniforms.numPotentials = { value: 2}; 
+                heightmapVariable1.material.defines.BOUNDS = BOUNDS.toFixed( 1 );
+
 
                 var error = gpuCompute.init();
                 if ( error !== null ) {
@@ -460,7 +518,7 @@
                 // Create compute shader to smooth the water surface and velocity
                 smoothShader = gpuCompute.createShaderMaterial( document.getElementById( 'smoothFragmentShader' ).textContent, { texture: { value: null } } );
 
-                waterUniforms.heightmap.value = gpuCompute.getCurrentRenderTarget( heightmapVariable ).texture;
+                waterUniforms.heightmap.value = gpuCompute.getCurrentRenderTarget( heightmapVariable1 ).texture;
             }
 
             function fillTexture( texture ) {
@@ -725,7 +783,7 @@
                 simulationStep();
                  
                 // Get compute output in custom uniform
-                var val = gpuCompute.getCurrentRenderTarget( heightmapVariable );
+                // var val = gpuCompute.getCurrentRenderTarget( heightmapVariable1 );
                 /*
 
                 console.log('20, 500')
