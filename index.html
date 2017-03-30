@@ -339,7 +339,7 @@
                 var models = function() {
                 // Define models here
                     this.well = function() { 
-
+                        fillTexture(heightmap0,'well');
                         gpuCompute.changeInitialValue(heightmap0);
                         var error = gpuCompute.init();
                         if ( error !== null ) {
@@ -349,12 +349,28 @@
                         // Create compute shader to smooth the water surface and velocity
                         smoothShader = gpuCompute.createShaderMaterial( document.getElementById( 'smoothFragmentShader' ).textContent, { texture: { value: null } } );
 
-                        waterUniforms.heightmap.value = gpuCompute.getCurrentRenderTarget( heightmapVariable ).texture; };
+                        waterUniforms.heightmap.value = gpuCompute.getCurrentRenderTarget( heightmapVariable ).texture; 
+                    };
+
+                    this.noise = function() { 
+                        fillTexture(heightmap0,'noise');
+                        gpuCompute.changeInitialValue(heightmap0);
+                        var error = gpuCompute.init();
+                        if ( error !== null ) {
+                            console.error( error );
+                        }
+                                
+                        // Create compute shader to smooth the water surface and velocity
+                        smoothShader = gpuCompute.createShaderMaterial( document.getElementById( 'smoothFragmentShader' ).textContent, { texture: { value: null } } );
+
+                        waterUniforms.heightmap.value = gpuCompute.getCurrentRenderTarget( heightmapVariable ).texture; 
+                    };
                 };
 
                 var myModels = new models();
                 var f0 = gui.addFolder('Pre-set Models');
                 f0.add(myModels,'well');
+                f0.add(myModels,'noise');
 
 
                 var particle_addition = function() {
@@ -504,38 +520,42 @@
                 waterUniforms.heightmap.value = gpuCompute.getCurrentRenderTarget( heightmapVariable ).texture;
             }
 
-            function fillTexture( texture ) {
+            function fillTexture( texture , func) {
+                if(func=='noise'){
+                    var waterMaxHeight = 10;
 
-                var waterMaxHeight = 10;
-
-                function noise( x, y, z ) {
-                    var multR = waterMaxHeight;
-                    var mult = 0.025;
-                    var r = 0;
-                    for ( var i = 0; i < 15; i++ ) {
-                        r += multR * simplex.noise3d( x * mult, y * mult, z * mult );
-                        multR *= 0.53 + 0.025 * i;
-                        mult *= 1.25;
-                    }
-                    return r;
+                    function noise( x, y, z ) {
+                        var multR = waterMaxHeight;
+                        var mult = 0.025;
+                        var r = 0;
+                        for ( var i = 0; i < 15; i++ ) {
+                            r += multR * simplex.noise3d( x * mult, y * mult, z * mult );
+                            multR *= 0.53 + 0.025 * i;
+                            mult *= 1.25;
+                        }
+                        return r;
+                    }    
                 }
+                
+                if(func=='well'){
 
-                var pixels = texture.image.data;
+                    var pixels = texture.image.data;
 
-                var p = 0;
-                for ( var j = 0; j < WIDTH; j++ ) {
-                    for ( var i = 0; i < WIDTH; i++ ) {
+                    var p = 0;
+                    for ( var j = 0; j < WIDTH; j++ ) {
+                        for ( var i = 0; i < WIDTH; i++ ) {
 
-                        var x = (i-WIDTH/2)/WIDTH*2;
-                        var y = (j-WIDTH/2)/WIDTH*2;
-                            
-                        //pixels[ p + 0 ] = noise(x,y,123.4);
-                        pixels[ p + 0 ] =  Math.sqrt(x*x+y*y) > 0.05 ? 200-1/Math.sqrt(x*x+y*y) : 0;
-                        pixels[ p + 1 ] = 0;
-                        pixels[ p + 2 ] = 0;
-                        pixels[ p + 3 ] = 1;
+                            var x = (i-WIDTH/2)/WIDTH*2;
+                            var y = (j-WIDTH/2)/WIDTH*2;
+                                
+                            //pixels[ p + 0 ] = noise(x,y,123.4);
+                            pixels[ p + 0 ] =  Math.sqrt(x*x+y*y) > 0.05 ? 200-1/Math.sqrt(x*x+y*y) : 0;
+                            pixels[ p + 1 ] = 0;
+                            pixels[ p + 2 ] = 0;
+                            pixels[ p + 3 ] = 1;
 
-                        p += 4;
+                            p += 4;
+                        }
                     }
                 }
 
