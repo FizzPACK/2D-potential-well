@@ -382,7 +382,7 @@
                 initWater();
                 
                 initBall(-1,0,0,0,0,6);
-                initBall(0.01,0,-50, 0, 0,1);
+                initBall(0.0001,0,-50, 0, 0,1);
 
                 valuesChanger();
 
@@ -682,10 +682,10 @@
             function forceStep(){
                 var temp_fx;
                 var temp_fz;
-                var scale = WIDTH/2;
+                var scale = 256;
                 var rx,rz,r;
 
-                for(var i = 1; i < balls.length; i++){
+                for(var i = 0; i < balls.length; i++){
                     for(var j = i+1; j < balls.length; j++){
                        
                         rx = (balls[i].position.x - balls[j].position.x);
@@ -695,15 +695,15 @@
                         //Gravitational Force
                         
                         if(r>R_s){
-                            temp_fx = balls[j].mass*rx/(r*r*r);
-                            temp_fz = balls[j].mass*rz/(r*r*r);
+                            temp_fx = rx/(r*r*r);
+                            temp_fz = rz/(r*r*r);
 
 
-                            balls[i].velocity.x = balls[i].velocity.x - temp_fx*scale;
-                            balls[i].velocity.z = balls[i].velocity.z - temp_fz*scale;
+                            balls[i].velocity.x = balls[i].velocity.x - balls[j].mass*temp_fx*scale;
+                            balls[i].velocity.z = balls[i].velocity.z - balls[j].mass*temp_fz*scale;
 
-                            balls[j].velocity.x = balls[j].velocity.x + temp_fx*scale;
-                            balls[j].velocity.z = balls[j].velocity.z + temp_fz*scale;
+                            balls[j].velocity.x = balls[j].velocity.x + balls[i].mass*temp_fx*scale;
+                            balls[j].velocity.z = balls[j].velocity.z + balls[i].mass*temp_fz*scale;
                         }else{
                             var v1x, v1y, v2x,v2y,m1,m2;
 
