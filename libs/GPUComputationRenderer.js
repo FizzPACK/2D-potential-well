@@ -146,6 +146,8 @@ function GPUComputationRenderer( sizeX, sizeY, renderer ) {
 
 	};
 
+	
+
 	this.init = function() {
 
 		if ( ! renderer.extensions.get( "OES_texture_float" ) ) {
