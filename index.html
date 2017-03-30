@@ -382,7 +382,7 @@
                 initWater();
                 
                 initBall(-1,0,0,0,0,6);
-                initBall(0.001,0,-50, 0, 0,1);
+                initBall(0.01,0,-50, 0, 0,1);
 
                 valuesChanger();
 
@@ -674,7 +674,7 @@
                 var scale = 256;
                 var rx,rz,r;
 
-                for(var i = 0; i < balls.length; i++){
+                for(var i = 1; i < balls.length; i++){
                     for(var j = i+1; j < balls.length; j++){
                        
                         rx = (balls[i].position.x - balls[j].position.x);
