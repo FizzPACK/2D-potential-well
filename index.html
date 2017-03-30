@@ -232,6 +232,9 @@
             var sphere;
             var balls = [];
             var mouseClicked;
+            
+            var traceCount = 0;
+            var traceArray = [];
 
             var simplex = new SimplexNoise();
 
@@ -374,6 +377,19 @@
                 balls.push( sphere )
                 scene.add( sphere ); 
             }
+            
+            function traceBall(x0, z0, r){
+                var geometry = new THREE.SphereGeometry( r, 32, 32 );
+                var material = new THREE.MeshBasicMaterial( {color: 0xd3d66f} );
+                var sphere = new THREE.Mesh( geometry, material );           
+                sphere.radius = r;
+                sphere.position.x = x0;
+                sphere.position.z = z0;
+                traceArray.push( sphere )
+                scene.add( sphere ); 
+                
+            }
+            
 
             function initWater() {
 
@@ -688,7 +704,7 @@
                 }
                 return out;
             }          
-
+            
             function render() {
                 
                 // Set uniforms: mouse interaction
@@ -732,8 +748,15 @@
                 console.log(getPotentialTile(20, 20));
                 */
                 // Render
+                
+                if(traceCount >= 10){
+                    traceBall(balls[1].x, balls[1].z, balls[1].r);
+                    traceCount = 0;
+                }
+                
                 renderer.render( scene, camera );
                 //console.log(val[0])
+                traceCount++;
 
             }
 
