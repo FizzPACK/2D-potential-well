@@ -340,6 +340,7 @@
                 // Define models here
                     this.well = function() { 
 
+                        gpuCompute.changeInitialValue(heightmap0);
                         var error = gpuCompute.init();
                         if ( error !== null ) {
                             console.error( error );

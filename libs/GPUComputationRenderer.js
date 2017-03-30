@@ -147,6 +147,16 @@ function GPUComputationRenderer( sizeX, sizeY, renderer ) {
 	};
 
 	
+	this.changeInitialValue = function(initialValueTexture) {
+
+		for ( var i = 0; i < this.variables.length; i++ ) {
+			this.variables[ i ].initialValueTexture=initialValueTexture;
+		}
+		return null;
+
+	};
+
+
 
 	this.init = function() {
 
