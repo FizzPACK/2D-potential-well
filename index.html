@@ -353,6 +353,7 @@
                     this.vx = 0;
                     this.vz = 0;
                     this.r = 0;
+                    this.trace = false;
                     this.add = function() { initBall(this.ma,this.x,this.z,this.vx,this.vz,this.r);};
                 };
                 var particle = new particle_addition();
@@ -363,6 +364,7 @@
                 f1.add(particle, 'vx');
                 f1.add(particle, 'vz');
                 f1.add(particle, 'r');
+                f1.add(particle, 'trace');
                 f1.add(particle, 'add');
                 gui.remember(f1);
 
