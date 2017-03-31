@@ -387,8 +387,11 @@
                
                 var models = function() {
                 // Define models here
-                    this.well = function() {
-                         var error = gpuCompute.init();
+                    this.well = function() { 
+                        heightmap0 = gpuCompute.createTexture();
+                        fillTexture(heightmap0,'well');
+                        gpuCompute.changeInitialValue(heightmap0);
+                        var error = gpuCompute.init();
                         if ( error !== null ) {
                             console.error( error );
                         }
@@ -398,10 +401,27 @@
 
                         waterUniforms.heightmap.value = gpuCompute.getCurrentRenderTarget( heightmapVariable1 ).texture;
                     };
+
+                    this.zero = function() { 
+                        heightmap0 = gpuCompute.createTexture();
+                        fillTexture(heightmap0,'zero');
+                        gpuCompute.changeInitialValue(heightmap0);
+                        var error = gpuCompute.init();
+                        if ( error !== null ) {
+                            console.error( error );
+                        }
+                                
+                        // Create compute shader to smooth the water surface and velocity
+                        smoothShader = gpuCompute.createShaderMaterial( document.getElementById( 'smoothFragmentShader' ).textContent, { texture: { value: null } } );
+
+                        waterUniforms.heightmap.value = gpuCompute.getCurrentRenderTarget( heightmapVariable ).texture; 
+                    };
+
                 };
 
                 var myModels = new models();
                 var f0 = gui.addFolder('Pre-set Models');
+                f0.add(myModels,'zero');
                 f0.add(myModels,'well');
 
 
@@ -530,9 +550,9 @@
 
                 heightmap0 = gpuCompute.createTexture();
 
-                fillTexture( heightmap0 );
-                
                 // Define GPU variables:
+                fillTexture( heightmap0 ,'well');
+
                 heightmapVariable = gpuCompute.addVariable( "heightmap", document.getElementById( 'heightmapFragmentShader' ).textContent, heightmap0 );
                 heightmapVariable1 = gpuCompute.addVariable( "heightmap1", document.getElementById( 'heightmapAddParticleShader' ).textContent, heightmap0 );
                 
@@ -562,38 +582,43 @@
                 waterUniforms.heightmap.value = gpuCompute.getCurrentRenderTarget( heightmapVariable1 ).texture;
             }
 
-            function fillTexture( texture ) {
+            function fillTexture( texture , func) {
 
-                var waterMaxHeight = 10;
+                if(func=='zero'){
+                    var pixels = texture.image.data;
 
-                function noise( x, y, z ) {
-                    var multR = waterMaxHeight;
-                    var mult = 0.025;
-                    var r = 0;
-                    for ( var i = 0; i < 15; i++ ) {
-                        r += multR * simplex.noise3d( x * mult, y * mult, z * mult );
-                        multR *= 0.53 + 0.025 * i;
-                        mult *= 1.25;
+                    var p = 0;
+                    for ( var j = 0; j < WIDTH; j++ ) {
+                        for ( var i = 0; i < WIDTH; i++ ) {
+                                
+                            //pixels[ p + 0 ] = noise(x,y,123.4);
+                            pixels[ p + 0 ] = 0;
+                            pixels[ p + 1 ] = 0;
+                            pixels[ p + 2 ] = 0;
+                            pixels[ p + 3 ] = 1;
+
+                            p += 4;
+                        }
                     }
-                    return r;
                 }
+                
+                if(func=='well'){
+                    var pixels = texture.image.data;
 
-                var pixels = texture.image.data;
+                    var p = 0;
+                    for ( var j = 0; j < WIDTH; j++ ) {
+                        for ( var i = 0; i < WIDTH; i++ ) {
 
-                var p = 0;
-                for ( var j = 0; j < WIDTH; j++ ) {
-                    for ( var i = 0; i < WIDTH; i++ ) {
-
-                        var x = (i-WIDTH/2)/WIDTH*2;
-                        var y = (j-WIDTH/2)/WIDTH*2;
-                            
-                        //pixels[ p + 0 ] = noise(x,y,123.4);
-                        pixels[ p + 0 ] = 10*(x*x+y*y); //Math.sqrt(x*x+y*y) > 0.05 ? 200-1/Math.sqrt(x*x+y*y) : 0;
-                        pixels[ p + 1 ] = 0;
-                        pixels[ p + 2 ] = 0;
-                        pixels[ p + 3 ] = 1;
-
-                        p += 4;
+                            var x = (i-WIDTH/2)/WIDTH*2;
+                            var y = (j-WIDTH/2)/WIDTH*2;
+                                
+                            //pixels[ p + 0 ] = noise(x,y,123.4);
+                            pixels[ p + 0 ] = 10*(x*x+y*y); //Math.sqrt(x*x+y*y) > 0.05 ? 200-1/Math.sqrt(x*x+y*y) : 0;
+                            pixels[ p + 1 ] = 0;
+                            pixels[ p + 2 ] = 0;
+                            pixels[ p + 3 ] = 1;
+                            p += 4;
+                        }
                     }
                 }
 
@@ -725,7 +750,18 @@
                 }
             }
 
-
+            function calcAngularMom(){
+                
+                var sum = 0;
+                
+                for(var i = 0; i < balls.length; i++){
+                    var temp = (balls[i].position.x * balls[i].mass * balls[i].velocity.z) - (balls[i].position.z * balls[i].mass * balls[i].velocity.x);
+                    sum += temp;
+                }
+                
+                return sum;
+                
+            }
 
             function forceStep(){
                 var temp_fx;
@@ -743,15 +779,15 @@
                         //Gravitational Force
                         
                         if(r>R_s){
-                            temp_fx = balls[j].mass*rx/(r*r*r);
-                            temp_fz = balls[j].mass*rz/(r*r*r);
+                            temp_fx = rx/(r*r*r);
+                            temp_fz = rz/(r*r*r);
 
 
-                            balls[i].velocity.x = balls[i].velocity.x - temp_fx*scale;
-                            balls[i].velocity.z = balls[i].velocity.z - temp_fz*scale;
+                            balls[i].velocity.x = balls[i].velocity.x - balls[j].mass*temp_fx*scale;
+                            balls[i].velocity.z = balls[i].velocity.z - balls[j].mass*temp_fz*scale;
 
-                            balls[j].velocity.x = balls[j].velocity.x + temp_fx*scale;
-                            balls[j].velocity.z = balls[j].velocity.z + temp_fz*scale;
+                            balls[j].velocity.x = balls[j].velocity.x + balls[i].mass*temp_fx*scale;
+                            balls[j].velocity.z = balls[j].velocity.z + balls[i].mass*temp_fz*scale;
                         }else{
                             var v1x, v1y, v2x,v2y,m1,m2;
 
