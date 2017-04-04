@@ -33,7 +33,7 @@
         <div id="info">
             <a href="http://threejs.org" target="_blank">three.js</a> - <span id="waterSize"></span> webgl gpgpu water<br/>
             Select <span id="options"></span> water size<br/>
-            Move mouse to disturb water.<br>
+            Move mouse to disturb potential field.<br>
             Press mouse button to orbit around. 'W' key toggles wireframe. //
         </div>
 
@@ -283,7 +283,6 @@
             var mouseClicked;
             
             var traceCount = 0;
-            var traceIndex = 0;
             var traceArray = [];
 
             var simplex = new SimplexNoise();
@@ -362,7 +361,7 @@
                 var gui = new dat.GUI();
 
                 var effectController = {
-                    mouseSize: 20.0,
+                    mouseSize: 0.0,
                     viscosity: 0.03
                 };
 
@@ -374,7 +373,7 @@
                 };
 
                 gui.add( effectController, "mouseSize", 0.0, 100.0, 1.0 ).onChange( valuesChanger );
-                gui.add( effectController, "viscosity", 0.0, 0.1, 0.001 ).onChange( valuesChanger );
+                //gui.add( effectController, "viscosity", 0.0, 0.1, 0.001 ).onChange( valuesChanger );
                 
                
                 var buttonSmooth = {
@@ -416,6 +415,7 @@
 
                         waterUniforms.heightmap.value = gpuCompute.getCurrentRenderTarget( heightmapVariable1 ).texture; 
                     };
+					
 
                 };
 
@@ -453,10 +453,10 @@
                 //initBall(8,0,0,0,0,6);
                 //initBall(2,0,-80, 200, 0,1);
                 initBall(100, 0, 0, 0, 0, 10, 0);
-                initBall(10, 0, -80, 400, 0, 3, 0);
-				initBall(10, 0, 80, -400, 0, 3, 0);
-				initBall(10, -80, 0, 0, 400, 3, 0);
-				initBall(10, 80, 0, 0, -400, 3, 0);
+                initBall(10, 0, -80, 420, 0, 3, 0);
+				initBall(10, 0, 80, -420, 0, 3, 0);
+				initBall(10, -80, 0, 0, -420, 3, 0);
+				initBall(10, 80, 0, 0, 420, 3, 0);
 
 
                
@@ -477,10 +477,9 @@
                 sphere.position.x = x0;
                 sphere.position.z = z0;
                 sphere.mass = ma;
+				sphere.trace = trace;
                 balls.push( sphere )
-                if(trace){
-                    traceIndex = balls.length - 1;         
-                }
+             
                 scene.add( sphere ); 
             }
             
@@ -884,7 +883,11 @@
                 // Render
                 
                 if(traceCount >= 20){
-                    traceBall(balls[traceIndex].position.x, balls[traceIndex].position.y, balls[traceIndex].position.z, 0.5);
+					for(var i = 0; i < balls.length; i++){
+						if(balls[i].trace){
+							traceBall(balls[i].position.x, balls[i].position.y, balls[i].position.z, 0.5);
+						}
+					}
                     traceCount = 0;
                 }
                 
