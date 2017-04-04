@@ -400,7 +400,11 @@
 
                         waterUniforms.heightmap.value = gpuCompute.getCurrentRenderTarget( heightmapVariable1 ).texture;
 
-                        balls = [];;
+                        for(var i=0; i<balls.length;i++){
+                            balls[i].parent.remove(balls[i]);
+                        };
+                        balls = null;
+                        balls = [];
                         initBall(1, 0, -80, 400, 0, 3, 0);
                         initBall(1, 0, 80, -400, 0, 3, 0);
                         initBall(1, -80, 0, 0, 400, 3, 0);
@@ -421,11 +425,12 @@
 
                         waterUniforms.heightmap.value = gpuCompute.getCurrentRenderTarget( heightmapVariable1 ).texture; 
 
-                        balls = [];
-                        for(var i=0; i<length(balls);i++){
-                            scene.remove(balls[i]);
-                        };
                         
+                        for(var i=0; i<balls.length;i++){
+                            balls[i].parent.remove(balls[i]);
+                        };
+                        balls = null;
+                        balls = [];
                         initBall(10000, 0, 0, 0, 0, 10, 0);
                         initBall(1, 0, -80, 400, 0, 3, 0);
                         initBall(1, 0, 80, -400, 0, 3, 0);
