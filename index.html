@@ -889,9 +889,11 @@
 
             }
             function updateUniforms(){
+                var potentials = [];
                 for (var i = 0; i < balls.length; i++){
-                    heightmapVariable1.material.uniforms.potentialInfo.value[i].set( balls[i].position.x,balls[i].position.z,balls[i].mass);
+                        potentials.push(new THREE.Vector4( balls[i].position.x,balls[i].position.z,balls[i].mass, 0.0 ));   //value[i].set( balls[i].position.x,balls[i].position.z,balls[i].mass);
                 }
+                heightmapVariable1.material.uniforms.potentialInfo = potentials.slice(0);
             }
         </script>
     </body>
