@@ -570,8 +570,9 @@
                 heightmapVariable.material.uniforms.viscosityConstant = { value: 0.03 };
                 heightmapVariable.material.defines.BOUNDS = BOUNDS.toFixed( 1 );
 
-                updateUniforms();
+                
                 heightmapVariable1.material.uniforms.numPotentials = { value: 5}; //changed from 2 -> 5
+                updateUniforms();
                 heightmapVariable1.material.defines.BOUNDS = BOUNDS.toFixed( 1 );
 
 
@@ -896,7 +897,7 @@
                 while(potentials.length < heightmapVariable1.material.uniforms.numPotentials.value){
                     potentials.push(new THREE.Vector4( 0.0, 0.0, 0.0, 0.0 ));   
                 }
-                heightmapVariable1.material.uniforms.potentialInfo = potentials.slice(0);
+                heightmapVariable1.material.uniforms.potentialInfo.value = potentials.slice(0);
             }
         </script>
     </body>
