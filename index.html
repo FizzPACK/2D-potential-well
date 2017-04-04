@@ -124,7 +124,7 @@
                     if (i >= numPotentials){break;}
                     // Calculate the distance
                     float dist = length( ( uv - vec2( 0.5 ) ) * BOUNDS - vec2( potentialInfo[i].x, - potentialInfo[i].y ) );
-                    dist = clamp(dist, potentialInfo[i].w, 3.0*BOUNDS)/BOUNDS*4.0;  
+                    dist = clamp(dist, potentialInfo[i].w, 3.0*BOUNDS);  
                     // Calculate the potential
                     float pot = - potentialInfo[i].z/dist; 
                     // add the potential
@@ -400,6 +400,12 @@
                         smoothShader = gpuCompute.createShaderMaterial( document.getElementById( 'smoothFragmentShader' ).textContent, { texture: { value: null } } );
 
                         waterUniforms.heightmap.value = gpuCompute.getCurrentRenderTarget( heightmapVariable1 ).texture;
+
+                        balls = [];;
+                        initBall(1, 0, -80, 400, 0, 3, 0);
+                        initBall(1, 0, 80, -400, 0, 3, 0);
+                        initBall(1, -80, 0, 0, 400, 3, 0);
+                        initBall(1, 80, 0, 0, -400, 3, 0);
                     };
 
                     this.zero = function() { 
@@ -415,6 +421,17 @@
                         smoothShader = gpuCompute.createShaderMaterial( document.getElementById( 'smoothFragmentShader' ).textContent, { texture: { value: null } } );
 
                         waterUniforms.heightmap.value = gpuCompute.getCurrentRenderTarget( heightmapVariable1 ).texture; 
+
+                        balls = [];
+                        for(var i=0; i<length(balls);i++){
+                            scene.remove(balls[i]);
+                        };
+                        
+                        initBall(10000, 0, 0, 0, 0, 10, 0);
+                        initBall(1, 0, -80, 400, 0, 3, 0);
+                        initBall(1, 0, 80, -400, 0, 3, 0);
+                        initBall(1, -80, 0, 0, 400, 3, 0);
+                        initBall(1, 80, 0, 0, -400, 3, 0);
                     };
 
                 };
@@ -452,9 +469,11 @@
                 
                 //initBall(8,0,0,0,0,6);
                 //initBall(2,0,-80, 200, 0,1);
-                initBall(100, 0, 0, 0, 0, 10, 0);
-                initBall(10, 0, -80, 400, 0, 3, 0);
-
+                initBall(10000, 0, 0, 0, 0, 10, 0);
+                initBall(1, 0, -80, 400, 0, 3, 0);
+                initBall(1, 0, 80, -400, 0, 3, 0);
+                initBall(1, -80, 0, 0, 400, 3, 0);
+                initBall(1, 80, 0, 0, -400, 3, 0);
 
                
                 
