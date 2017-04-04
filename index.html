@@ -453,7 +453,10 @@
                 //initBall(8,0,0,0,0,6);
                 //initBall(2,0,-80, 200, 0,1);
                 initBall(100, 0, 0, 0, 0, 10, 0);
-                initBall(1, 0, -80, 200, 0, 1, 1);
+                initBall(10, 0, -80, 400, 0, 3, 1);
+                initBall(1, 0, -100, 400, 0, 1, 0);
+               
+                
                 valuesChanger();
 
             }
@@ -717,7 +720,7 @@
 
             function simulationStep(){
 
-            	forceStep();
+            	//forceStep();
                 
                 var temp_fx, temp_fz;
                 var temp_x, temp_z;
@@ -875,7 +878,7 @@
                 */
                 // Render
                 
-                if(traceCount >= 30){
+                if(traceCount >= 20){
                     traceBall(balls[traceIndex].position.x, balls[traceIndex].position.y, balls[traceIndex].position.z, 0.5);
                     traceCount = 0;
                 }
