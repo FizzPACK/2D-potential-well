@@ -258,7 +258,7 @@
             if ( hash ) hash = parseInt( hash, 0 );
 
             // Texture width for simulation
-            var WIDTH = hash || 128;
+            var WIDTH = hash || 512;
             var NUM_TEXELS = WIDTH * WIDTH;
 
             // Water size in system units
@@ -301,7 +301,7 @@
 
 
             var options = '';
-            for ( var i = 4; i < 10; i++ ) {
+            for ( var i = 9; i < 10; i++ ) {
                 var j = Math.pow( 2, i );
                 options += '<a href="#" onclick="return change(' + j + ')">' + j + 'x' + j + '</a> ';
             }
