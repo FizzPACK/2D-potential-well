@@ -124,7 +124,7 @@
                     if (i >= numPotentials){break;}
                     // Calculate the distance
                     float dist = length( ( uv - vec2( 0.5 ) ) * BOUNDS - vec2( potentialInfo[i].x, - potentialInfo[i].y ) );
-                    dist = clamp(dist, potentialInfo[i].radius, 3.0*BOUNDS)/BOUNDS*4.0;  
+                    dist = clamp(dist, potentialInfo[i].w, 3.0*BOUNDS)/BOUNDS*4.0;  
                     // Calculate the potential
                     float pot = - potentialInfo[i].z/dist; 
                     // add the potential
