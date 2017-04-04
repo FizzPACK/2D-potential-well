@@ -124,7 +124,7 @@
                     if (i >= numPotentials){break;}
                     // Calculate the distance
                     float dist = length( ( uv - vec2( 0.5 ) ) * BOUNDS - vec2( potentialInfo[i].x, - potentialInfo[i].y ) );
-                    dist = clamp(dist, 10.0, BOUNDS)/BOUNDS*4.0;  
+                    dist = clamp(dist, potentialInfo[i].radius, 3*BOUNDS)/BOUNDS*4.0;  
                     // Calculate the potential
                     float pot = - potentialInfo[i].z/dist; 
                     // add the potential
@@ -893,7 +893,7 @@
             function updateUniforms(){
                 var potentials = [];
                 for (var i = 0; i < balls.length; i++){
-                        potentials.push(new THREE.Vector4( balls[i].position.x,balls[i].position.z,balls[i].mass, 0.0 ));   
+                        potentials.push(new THREE.Vector4( balls[i].position.x,balls[i].position.z,balls[i].mass, balls[i].radius ));   
                 }
                 while(potentials.length < heightmapVariable1.material.uniforms.numPotentials.value){
                     potentials.push(new THREE.Vector4( 0.0, 0.0, 0.0, 0.0 ));   
