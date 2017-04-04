@@ -897,7 +897,7 @@
                 while(potentials.length < heightmapVariable1.material.uniforms.numPotentials.value){
                     potentials.push(new THREE.Vector4( 0.0, 0.0, 0.0, 0.0 ));   
                 }
-                heightmapVariable1.material.uniforms.potentialInfo.value = potentials.slice(0);
+                heightmapVariable1.material.uniforms.potentialInfo = { value: potentials.slice(0)};
             }
         </script>
     </body>
