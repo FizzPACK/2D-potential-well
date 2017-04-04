@@ -106,7 +106,7 @@
             
             // x,z,param,param
             uniform int numPotentials; 
-            uniform vec4 potentialInfo[ 2 ];
+            uniform vec4 potentialInfo[ 5 ];  //changed from 2 -> 5
 
             #define deltaTime ( 1.0 / 60.0 )
 
@@ -414,7 +414,7 @@
                         // Create compute shader to smooth the water surface and velocity
                         smoothShader = gpuCompute.createShaderMaterial( document.getElementById( 'smoothFragmentShader' ).textContent, { texture: { value: null } } );
 
-                        waterUniforms.heightmap.value = gpuCompute.getCurrentRenderTarget( heightmapVariable1 ).texture; 
+                        waterUniforms.heightmap.value = gpuCompute.getCurrentRenderTarget( heightmapVariable ).texture; 
                     };
 
                 };
@@ -454,7 +454,7 @@
                 //initBall(2,0,-80, 200, 0,1);
                 initBall(100, 0, 0, 0, 0, 10, 0);
                 initBall(10, 0, -80, 400, 0, 3, 1);
-                initBall(1, 0, -100, 400, 0, 1, 0);
+
                
                 
                 valuesChanger();
@@ -571,7 +571,7 @@
                 heightmapVariable.material.defines.BOUNDS = BOUNDS.toFixed( 1 );
 
                 heightmapVariable1.material.uniforms.potentialInfo = { value: [ new THREE.Vector4( 0.0, 0.0, 9.0, 0.0 ), new THREE.Vector4( 50.0, 50.0, 5, 0 ) ] };
-                heightmapVariable1.material.uniforms.numPotentials = { value: 2}; 
+                heightmapVariable1.material.uniforms.numPotentials = { value: 5}; //changed from 2 -> 5
                 heightmapVariable1.material.defines.BOUNDS = BOUNDS.toFixed( 1 );
 
 
