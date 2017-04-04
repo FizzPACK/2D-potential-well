@@ -779,7 +779,7 @@
                         R_s = balls[i].radius + balls[j].radius;
                         //Gravitational Force
                         
-                        if(r>R_s){
+                       // if(r>R_s){
                             temp_fx = rx/(r*r*r);
                             temp_fz = rz/(r*r*r);
 
@@ -789,8 +789,8 @@
 
                             balls[j].velocity.x = balls[j].velocity.x + balls[i].mass*temp_fx*scale;
                             balls[j].velocity.z = balls[j].velocity.z + balls[i].mass*temp_fz*scale;
-                        }else{
-                            var v1x, v1y, v2x,v2y,m1,m2;
+                        //}else{
+                            /*var v1x, v1y, v2x,v2y,m1,m2;
 
                             v1x = balls[i].velocity.x;
                             v1y = balls[i].velocity.z;
@@ -809,9 +809,9 @@
                             balls[i].position.x = balls[j].position.x+R_s*rx/r ;
                             balls[i].position.z = balls[j].position.z+R_s*rz/r ;
                             
+                */
 
-
-                        }
+                       // }
 
                         
 
