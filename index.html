@@ -281,6 +281,7 @@
             var sphere;
             var balls = [];
             var colfunc;
+            var traceLength;
             var mouseClicked;
             
             var traceCount = 0;
@@ -363,18 +364,18 @@
 
                 var effectController = {
                     mouseSize: 0.0,
-                    viscosity: 0.03
+                    traceLength: 20.0
                 };
 
                 var valuesChanger = function() {
 
                     heightmapVariable.material.uniforms.mouseSize.value = effectController.mouseSize;
-                    heightmapVariable.material.uniforms.viscosityConstant.value = effectController.viscosity;
+                    traceLength = effectController.traceLength;
 
                 };
 
                 gui.add( effectController, "mouseSize", 0.0, 100.0, 1.0 ).onChange( valuesChanger );
-                //gui.add( effectController, "viscosity", 0.0, 0.1, 0.001 ).onChange( valuesChanger );
+                gui.add( effectController, "traceLength", 0.0, 100, 1.0 ).onChange( valuesChanger );
                 
                 
                 var collision_option = function(){
@@ -412,6 +413,11 @@
                         for(var i=0; i<balls.length;i++){
                             balls[i].parent.remove(balls[i]);
                         };
+                        for(var i=0; i<traceArray.length;i++){
+                            traceArray[i].parent.remove(traceArray[i]);
+                        };
+                        traceArray = null;
+                        traceArray = [];
                         balls = null;
                         balls = [];
                         initBall(10000, 0, 0, 0, 0, 10, 1);
@@ -439,6 +445,11 @@
                         for(var i=0; i<balls.length;i++){
                             balls[i].parent.remove(balls[i]);
                         };
+                        for(var i=0; i<traceArray.length;i++){
+                            traceArray[i].parent.remove(traceArray[i]);
+                        };
+                        traceArray = null;
+                        traceArray = [];
                         balls = null;
                         balls = [];
                         initBall(10000, 0, 0, 0, 0, 10, 1);
@@ -510,7 +521,6 @@
                 sphere.mass = ma;
 				sphere.trace = trace;
                 balls.push( sphere )
-             
                 scene.add( sphere ); 
             }
             
@@ -522,8 +532,12 @@
                 sphere.position.x = x0;
                 sphere.position.y = y0;
                 sphere.position.z = z0;
-                traceArray.push( sphere )
-                scene.add( sphere ); 
+                traceArray.push( sphere );
+                while(traceArray.length>traceLength*balls.length){
+                    traceArray[0].parent.remove(traceArray[0]);
+                    traceArray.splice(0,1);
+                }
+                scene.add( sphere );             
                 
             }
             
