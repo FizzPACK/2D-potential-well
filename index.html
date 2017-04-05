@@ -280,6 +280,7 @@
             var heightmap0; 
             var sphere;
             var balls = [];
+            var colfunc;
             var mouseClicked;
             
             var traceCount = 0;
@@ -375,7 +376,15 @@
                 gui.add( effectController, "mouseSize", 0.0, 100.0, 1.0 ).onChange( valuesChanger );
                 //gui.add( effectController, "viscosity", 0.0, 0.1, 0.001 ).onChange( valuesChanger );
                 
+                
+                var collision_option = function(){
+                    this.Collision = false;                    
+                } ;
+                colfunc = new collision_option();
+                gui.add(colfunc, 'Collision');
                
+
+
                 var buttonSmooth = {
                     smoothWater: function() {
                     smoothWater();
@@ -405,11 +414,11 @@
                         };
                         balls = null;
                         balls = [];
-                        initBall(10000, 0, 0, 0, 0, 10, 0);
-                        initBall(1, 0, -80, 400, 0, 3, 0);
-                        initBall(1, 0, 80, -400, 0, 3, 0);
-                        initBall(1, -80, 0, 0, 400, 3, 0);
-                        initBall(1, 80, 0, 0, -400, 3, 0);
+                        initBall(10000, 0, 0, 0, 0, 10, 1);
+                        initBall(1, 0, -80, 400, 0, 3, 1);
+                        initBall(1, 0, 80, -400, 0, 3, 1);
+                        initBall(1, -80, 0, 0, 400, 3, 1);
+                        initBall(1, 80, 0, 0, -400, 3, 1);
                     };
 
                     this.zero = function() { 
@@ -432,11 +441,11 @@
                         };
                         balls = null;
                         balls = [];
-                        initBall(10000, 0, 0, 0, 0, 10, 0);
-                        initBall(1, 0, -80, 400, 0, 3, 0);
-                        initBall(1, 0, 80, -400, 0, 3, 0);
-                        initBall(1, -80, 0, 0, 400, 3, 0);
-                        initBall(1, 80, 0, 0, -400, 3, 0);
+                        initBall(10000, 0, 0, 0, 0, 10, 1);
+                        initBall(1, 0, -80, 400, 0, 3, 1);
+                        initBall(1, 0, 80, -400, 0, 3, 1);
+                        initBall(1, -80, 0, 0, 400, 3, 1);
+                        initBall(1, 80, 0, 0, -400, 3, 1);
                     };
 					
 
@@ -450,13 +459,13 @@
 
                 var particle_addition = function() {
                 // Define default values here
-                    this.ma = 0;
-                    this.x = 10;
-                    this.z = 0;
-                    this.vx = 0;
-                    this.vz = 0;
-                    this.r = 0;
-                    this.trace = false;
+                    this.ma = 1;
+                    this.x = 100;
+                    this.z = 100;
+                    this.vx =-100;
+                    this.vz = 100;
+                    this.r = 1;
+                    this.trace = true;
                     this.add = function() { initBall(this.ma,this.x,this.z,this.vx,this.vz,this.r, this.trace);};
                 };
                 var particle = new particle_addition();
@@ -475,11 +484,11 @@
                 
                 //initBall(8,0,0,0,0,6);
                 //initBall(2,0,-80, 200, 0,1);
-                initBall(10000, 0, 0, 0, 0, 10, 0);
-                initBall(1, 0, -80, 400, 0, 3, 0);
-                initBall(1, 0, 80, -400, 0, 3, 0);
-                initBall(1, -80, 0, 0, 400, 3, 0);
-                initBall(1, 80, 0, 0, -400, 3, 0);
+                initBall(10000, 0, 0, 0, 0, 10, 1);
+                initBall(1, 0, -80, 400, 0, 3, 1);
+                initBall(1, 0, 80, -400, 0, 3, 1);
+                initBall(1, -80, 0, 0, 400, 3, 1);
+                initBall(1, 80, 0, 0, -400, 3, 1);
 
                
                 
@@ -580,7 +589,7 @@
                 heightmap0 = gpuCompute.createTexture();
 
                 // Define GPU variables:
-                fillTexture( heightmap0 ,'well');
+                fillTexture( heightmap0 ,'zero');
 
                 heightmapVariable = gpuCompute.addVariable( "heightmap", document.getElementById( 'heightmapFragmentShader' ).textContent, heightmap0 );
                 heightmapVariable1 = gpuCompute.addVariable( "heightmap1", document.getElementById( 'heightmapAddParticleShader' ).textContent, heightmap0 );
@@ -746,7 +755,7 @@
 
             function simulationStep(){
 
-            	//forceStep();
+            	forceStep();
                 
                 var temp_fx, temp_fz;
                 var temp_x, temp_z;
@@ -808,8 +817,8 @@
                         R_s = balls[i].radius + balls[j].radius;
                         //Gravitational Force
                         
-                       // if(r>R_s){
-                            temp_fx = rx/(r*r*r);
+                        if(r>R_s){
+                            /*temp_fx = rx/(r*r*r);
                             temp_fz = rz/(r*r*r);
 
 
@@ -818,8 +827,9 @@
 
                             balls[j].velocity.x = balls[j].velocity.x + balls[i].mass*temp_fx*scale;
                             balls[j].velocity.z = balls[j].velocity.z + balls[i].mass*temp_fz*scale;
-                        //}else{
-                            /*var v1x, v1y, v2x,v2y,m1,m2;
+                            */
+                        }else if (colfunc.Collision){
+                            var v1x, v1y, v2x,v2y,m1,m2;
 
                             v1x = balls[i].velocity.x;
                             v1y = balls[i].velocity.z;
@@ -838,9 +848,8 @@
                             balls[i].position.x = balls[j].position.x+R_s*rx/r ;
                             balls[i].position.z = balls[j].position.z+R_s*rz/r ;
                             
-                */
-
-                       // }
+                
+                        }
 
                         
 
