@@ -458,11 +458,24 @@
                         traceArray = [];
                         balls = null;
                         balls = [];
-						initBall(10000, 0, 0, 0, 0, 10, 1);
-						initBall(1000, 0, -200, -200, 0, 3, 1);
-						initBall(50, 0, -215, -400, 0, 1, 1);
-						initBall(1000, 0, 200, 200, 0, 3, 1);
-						initBall(50, 0, 215, 400, 0, 1, 1);
+                        initBall(10000, 0, 0, 2.75, -1.75, 10, 1);
+                        initBall(100, 0, -450, -150, 0, 3, 1);
+                        initBall(0.1, 0, -480, -200, 0, 1, 1);
+                        initBall(0.1, 0, -440, -50, 0, 1, 1);
+                        initBall(100, 0, -100, -300, 0, 2, 1);
+                        initBall(0.1, 0, -105, -450, 0, 0.5, 1);
+                        initBall(100, 0, 300, 175, 0, 3, 0);
+                        initBall(100, -300, 0, 0, 175, 3, 0);
+                        initBall(0.1, 0, 310, 270, 0, 1, 0);
+                        initBall(0.1, -310, 0, 0, 270, 1, 0);
+                        
+                        colfunc.Collision = false;
+                        effectController.simSpeed = 200.0;
+                        simSpeed=effectController.simSpeed;
+                        for (var i in gui.__controllers) {
+                            gui.__controllers[i].updateDisplay();
+                        }
+
                     };
 
                     this.zero = function() { 
@@ -562,8 +575,6 @@
 
                 initWater();
                 
-                //initBall(8,0,0,0,0,6);
-                //initBall(2,0,-80, 200, 0,1);
                 initBall(10000, 0, 0, 0, 0, 10, 1);
                 initBall(1000, 0, -200, -200, 0, 3, 1);
                 initBall(50, 0, -215, -300, 0, 1, 1);
