@@ -9,7 +9,7 @@ function GravityZeroPotential(){
             // Calculate the distance
             var dist = calcXZDist(balls[i].position, position) 
             // Clamp the dist at some value
-            dist = Math.max(0.1, dist);
+            dist = Math.max(0.2, dist);
             pot -= balls[i].mass/dist;
         }
         return this.gravConst*pot;
