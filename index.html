@@ -107,11 +107,11 @@
             
             // x,z,param,param
             uniform int numPotentials; 
-            uniform vec4 potentialInfo[ 5 ];  //changed from 2 -> 5
+            uniform vec4 potentialInfo[ 20 ];  //changed from 2 -> 5
 
             #define deltaTime ( 1.0 / 60.0 )
 
-            const int MAX_ITERATIONS = 100;            
+            const int MAX_ITERATIONS = 20;            
 
             void main() {
 
@@ -125,9 +125,9 @@
                     if (i >= numPotentials){break;}
                     // Calculate the distance
                     float dist = length( ( uv - vec2( 0.5 ) ) * BOUNDS - vec2( potentialInfo[i].x, - potentialInfo[i].y ) );
-                    dist = clamp(dist, potentialInfo[i].w, 3.0*BOUNDS);  
+                    dist = clamp(dist, potentialInfo[i].w*2.0, 3.0*BOUNDS);  
                     // Calculate the potential
-                    float pot = - potentialInfo[i].z/dist; 
+                    float pot = - potentialInfo[i].z/dist + potentialInfo[i].z/dist/dist*20.0; 
                     // add the potential
                     heightmapValue += pot; 
                 } 
@@ -280,7 +280,7 @@
             var smoothShader;
             var heightmap0; 
             var sphere;
-            var potFunc = new GravityZeroPotential();
+            var potFunc = new AtomZeroPotential();
             var balls = [];
             var colfunc;
             var traceLength;
@@ -429,10 +429,10 @@
                         balls = null;
                         balls = [];
                         initBall(10000, 0, 0, 0, 0, 10, 1);
-                        initBall(100, 0, -80, 400, 0, 3, 1);
-                        initBall(100, 0, 80, -400, 0, 3, 1);
-                        initBall(100, -80, 0, 0, 400, 3, 1);
-                        initBall(100, 80, 0, 0, -400, 3, 1);
+                        initBall(1000, 0, -80, 400, 0, 3, 1);
+                        initBall(1000, 0, 80, -400, 0, 3, 1);
+                        initBall(1000, -80, 0, 0, 400, 3, 1);
+                        initBall(1000, 80, 0, 0, -400, 3, 1);
                     };
 
                     this.zero = function() { 
@@ -504,11 +504,12 @@
                 //initBall(8,0,0,0,0,6);
                 //initBall(2,0,-80, 200, 0,1);
                 initBall(10000, 0, 0, 0, 0, 10, 1);
-                initBall(10, 0, -100, -400, 0, 3, 1);
-                initBall(10, 0, 100, +400, 0, 3, 1);
-                initBall(10, -100, 0, 0, 400, 3, 1);
-                initBall(10, 100, 0, 0, -400, 3, 1);
-
+                initBall(10000, 0, -80, -150, 0, 10, 1);
+                initBall(10000, 0, 80, +150, 0, 10, 1);
+                initBall(10000, -80, 0, 0, 150, 10, 1);
+                initBall(10000, 80, 0, 0, -150, 10, 1);
+                initBall(10000, 50, 0, 0, 0, 10, 1);
+                initBall(10000, -50, 0, 0, 0, 10, 1);
                 valuesChanger();
 
             }
@@ -625,7 +626,7 @@
                 heightmapVariable.material.defines.BOUNDS = BOUNDS.toFixed( 1 );
 
                 
-                heightmapVariable1.material.uniforms.numPotentials = { value: 5}; //changed from 2 -> 5
+                heightmapVariable1.material.uniforms.numPotentials = { value: 10}; //changed from 2 -> 5
                 updateUniforms();
                 heightmapVariable1.material.defines.BOUNDS = BOUNDS.toFixed( 1 );
 
@@ -649,9 +650,12 @@
                     var p = 0;
                     for ( var j = 0; j < WIDTH; j++ ) {
                         for ( var i = 0; i < WIDTH; i++ ) {
-                                
+ 
+                            var x = (i-WIDTH/2);
+                            var z = (j-WIDTH/2);
+
                             //pixels[ p + 0 ] = noise(x,y,123.4);
-                            pixels[ p + 0 ] = 0;
+                            pixels[ p + 0 ] = potFunc.staticPot({x: x, z: z});
                             pixels[ p + 1 ] = 0;
                             pixels[ p + 2 ] = 0;
                             pixels[ p + 3 ] = 1;
@@ -976,10 +980,11 @@
                 for (var i = 0; i < balls.length; i++){
                         potentials.push(new THREE.Vector4( balls[i].position.x,balls[i].position.z,balls[i].mass, balls[i].radius ));   
                 }
-                while(potentials.length < heightmapVariable1.material.uniforms.numPotentials.value){
+                while(potentials.length < 20){
                     potentials.push(new THREE.Vector4( 0.0, 0.0, 0.0, 0.0 ));   
                 }
                 heightmapVariable1.material.uniforms.potentialInfo = { value: potentials.slice(0)};
+                heightmapVariable1.material.uniforms.numPotentials.value = balls.length;
             }
         </script>
     </body>
