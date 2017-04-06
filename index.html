@@ -107,7 +107,7 @@
             
             // x,z,param,param
             uniform int numPotentials; 
-            uniform vec4 potentialInfo[ 5 ];  //changed from 2 -> 5
+            uniform vec4 potentialInfo[ 30 ];  //changed from 2 -> 5
 
             #define deltaTime ( 1.0 / 60.0 )
 
@@ -387,7 +387,7 @@
                 
                 
                 var collision_option = function(){
-                    this.Collision = false;                    
+                    this.Collision = true;                    
                 } ;
                 colfunc = new collision_option();
                 gui.add(colfunc, 'Collision');
@@ -687,7 +687,7 @@
                 heightmapVariable.material.defines.BOUNDS = BOUNDS.toFixed( 1 );
 
                 
-                heightmapVariable1.material.uniforms.numPotentials = { value: 5}; //changed from 2 -> 5
+                heightmapVariable1.material.uniforms.numPotentials = { value: 30}; //changed from 2 -> 5
                 updateUniforms();
                 heightmapVariable1.material.defines.BOUNDS = BOUNDS.toFixed( 1 );
 
