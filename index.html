@@ -258,11 +258,11 @@
             if ( hash ) hash = parseInt( hash, 0 );
 
             // Texture width for simulation
-            var WIDTH = hash || 512;
+            var WIDTH = hash || 1024;
             var NUM_TEXELS = WIDTH * WIDTH;
 
             // Water size in system units
-            var BOUNDS = 512;
+            var BOUNDS = 1024;
             var BOUNDS_HALF = BOUNDS * 0.5;
 
             var container, stats;
@@ -282,6 +282,8 @@
             var balls = [];
             var mouseClicked;
             
+            var simSpeed = 0;
+
             var traceCount = 0;
             var traceArray = [];
 
@@ -362,17 +364,21 @@
 
                 var effectController = {
                     mouseSize: 0.0,
-                    viscosity: 0.03
+                    viscosity: 0.03,
+                    simSpeed: 1.0
                 };
 
                 var valuesChanger = function() {
 
                     heightmapVariable.material.uniforms.mouseSize.value = effectController.mouseSize;
                     heightmapVariable.material.uniforms.viscosityConstant.value = effectController.viscosity;
+                    simSpeed = effectController.simSpeed;
 
                 };
 
+
                 gui.add( effectController, "mouseSize", 0.0, 100.0, 1.0 ).onChange( valuesChanger );
+                gui.add( effectController, "simSpeed", 1.0, 40.0, 1.0 ).onChange( valuesChanger );
                 //gui.add( effectController, "viscosity", 0.0, 0.1, 0.001 ).onChange( valuesChanger );
                 
                
@@ -477,8 +483,8 @@
                 initBall(10000, 0, 0, 0, 0, 10, 0);
                 initBall(1, 0, -80, 400, 0, 3, 0);
                 initBall(1, 0, 80, -400, 0, 3, 0);
-                initBall(1, -80, 0, 0, 400, 3, 0);
-                initBall(1, 80, 0, 0, -400, 3, 0);
+                initBall(1, -80, 0, 0, -400, 3, 0);
+                initBall(1, 80, 0, 0, 400, 3, 0);
 
                
                 
@@ -642,7 +648,7 @@
                             var y = (j-WIDTH/2)/WIDTH*2;
                                 
                             //pixels[ p + 0 ] = noise(x,y,123.4);
-                            pixels[ p + 0 ] = 10*(x*x+y*y); //Math.sqrt(x*x+y*y) > 0.05 ? 200-1/Math.sqrt(x*x+y*y) : 0;
+                            pixels[ p + 0 ] = 0; //10*(x*x+y*y); Math.sqrt(x*x+y*y) > 0.05 ? 200-1/Math.sqrt(x*x+y*y) : 0;
                             pixels[ p + 1 ] = 0;
                             pixels[ p + 2 ] = 0;
                             pixels[ p + 3 ] = 1;
@@ -750,7 +756,7 @@
                 var temp_fx, temp_fz;
                 var temp_x, temp_z;
                 var scale = 1000;
-                var dt = 0.001;
+                var dt = 0.0005;
                 var potentialGrid = heightmap0.image.data;
 
                 for (var count=0; count < balls.length; count++){
@@ -859,6 +865,7 @@
                 return out;
             }          
             
+            var renderCount = 0;
             function render() {
                 
                 // Set uniforms: mouse interaction
@@ -912,10 +919,14 @@
                     traceCount = 0;
                 }
                 
-                renderer.render( scene, camera );
-                //console.log(val[0])
-                traceCount++;
+                if (renderCount >= simSpeed){
+                    renderer.render( scene, camera );
+                    renderCount = 0;
+                }
 
+                //console.log(val[0])
+                ++traceCount;
+                ++renderCount;
             }
             function updateUniforms(){
                 var potentials = [];
