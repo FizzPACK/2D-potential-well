@@ -464,7 +464,37 @@
                         initBall(1, -80, 0, 0, 400, 3, 1);
                         initBall(1, 80, 0, 0, -400, 3, 1);
                     };
-					
+
+
+					this.negativeMassOscillation = function() { 
+                        heightmap0 = gpuCompute.createTexture();
+                        fillTexture(heightmap0,'negativeMass');
+                        gpuCompute.changeInitialValue(heightmap0);
+                        var error = gpuCompute.init();
+                        if ( error !== null ) {
+                            console.error( error );
+                        }
+                                
+                        // Create compute shader to smooth the water surface and velocity
+                        smoothShader = gpuCompute.createShaderMaterial( document.getElementById( 'smoothFragmentShader' ).textContent, { texture: { value: null } } );
+
+                        waterUniforms.heightmap.value = gpuCompute.getCurrentRenderTarget( heightmapVariable1 ).texture; 
+
+                        
+                        for(var i=0; i<balls.length;i++){
+                            balls[i].parent.remove(balls[i]);
+                        };
+                        for(var i=0; i<traceArray.length;i++){
+                            traceArray[i].parent.remove(traceArray[i]);
+                        };
+                        traceArray = null;
+                        traceArray = [];
+                        balls = null;
+                        balls = [];
+                        
+                        initBall(-10000, 0,80, -400, 0, 3, 1);
+                        initBall(-10000, 0, -80, 400, 0, 3, 1);
+                    };
 
                 };
 
@@ -472,7 +502,7 @@
                 var f0 = gui.addFolder('Pre-set Models');
                 f0.add(myModels,'zero');
                 f0.add(myModels,'well');
-
+                f0.add(myModels,'negativeMassOscillation');
 
                 var particle_addition = function() {
                 // Define default values here
@@ -576,7 +606,7 @@
                 material.uniforms.diffuse.value = material.color;
                 material.uniforms.specular.value = material.specular;
                 material.uniforms.shininess.value = Math.max( material.shininess, 1e-4 );
-                material.uniforms.opacity.value = 0.1;
+                material.uniforms.opacity.value = 0.5;
 
                 // Defines
                 material.defines.WIDTH = WIDTH.toFixed( 1 );
@@ -670,7 +700,7 @@
                             var y = (j-WIDTH/2)/WIDTH*2;
                                 
                             //pixels[ p + 0 ] = noise(x,y,123.4);
-                            pixels[ p + 0 ] = 0; //10*(x*x+y*y); Math.sqrt(x*x+y*y) > 0.05 ? 200-1/Math.sqrt(x*x+y*y) : 0;
+                            pixels[ p + 0 ] = 80*(x*x+y*y);// Math.sqrt(x*x+y*y) > 0.05 ? 200-1/Math.sqrt(x*x+y*y) : 0;
                             pixels[ p + 1 ] = 0;
                             pixels[ p + 2 ] = 0;
                             pixels[ p + 3 ] = 1;
@@ -679,6 +709,26 @@
                     }
                 }
 
+
+                if(func=='negativeMass'){
+                    var pixels = texture.image.data;
+
+                    var p = 0;
+                    for ( var j = 0; j < WIDTH; j++ ) {
+                        for ( var i = 0; i < WIDTH; i++ ) {
+
+                            var x = (i-WIDTH/2)/WIDTH*2;
+                            var y = (j-WIDTH/2)/WIDTH*2;
+                                
+                            //pixels[ p + 0 ] = noise(x,y,123.4);
+                            pixels[ p + 0 ] = 200*(Math.max(x,y)+Math.max(x,-1*y)+Math.max(-1*x,-1*y)+Math.max(-1*x,y)); //10*(x*x+y*y); Math.sqrt(x*x+y*y) > 0.05 ? 200-1/Math.sqrt(x*x+y*y) : 0;
+                            pixels[ p + 1 ] = 0;
+                            pixels[ p + 2 ] = 0;
+                            pixels[ p + 3 ] = 1;
+                            p += 4;
+                        }
+                    }
+                }
             }
 
             function smoothWater() {
