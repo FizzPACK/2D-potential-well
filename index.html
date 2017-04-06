@@ -429,10 +429,10 @@
                         balls = null;
                         balls = [];
                         initBall(10000, 0, 0, 0, 0, 10, 1);
-                        initBall(1000, 0, -80, 400, 0, 3, 1);
-                        initBall(1000, 0, 80, -400, 0, 3, 1);
-                        initBall(1000, -80, 0, 0, 400, 3, 1);
-                        initBall(1000, 80, 0, 0, -400, 3, 1);
+                        initBall(100, 0, -80, 400, 0, 3, 1);
+                        initBall(100, 0, 80, -400, 0, 3, 1);
+                        initBall(100, -80, 0, 0, 400, 3, 1);
+                        initBall(100, 80, 0, 0, -400, 3, 1);
                     };
 
                     this.zero = function() { 
@@ -504,17 +504,17 @@
                 //initBall(8,0,0,0,0,6);
                 //initBall(2,0,-80, 200, 0,1);
                 initBall(10000, 0, 0, 0, 0, 10, 1);
-                initBall(1000, 0, -80, -400, 0, 3, 1);
-                initBall(1000, 0, 80, +400, 0, 3, 1);
-                initBall(1000, -80, 0, 0, 400, 3, 1);
-                initBall(1000, 80, 0, 0, -400, 3, 1);
+                initBall(10, 0, -100, -400, 0, 3, 1);
+                initBall(10, 0, 100, +400, 0, 3, 1);
+                initBall(10, -100, 0, 0, 400, 3, 1);
+                initBall(10, 100, 0, 0, -400, 3, 1);
 
                 valuesChanger();
 
             }
             
              function initBall(ma,x0,z0, v0x, v0z, r, trace){
-                var geometry = new THREE.SphereGeometry( r, 32, 32 );
+                var geometry = new THREE.SphereGeometry( r, 8, 8 );
                 var material = new THREE.MeshBasicMaterial( {color: 0xffff00} );
                 var sphere = new THREE.Mesh( geometry, material );
                 var velocity = {};
@@ -531,7 +531,7 @@
             }
             
             function traceBall(x0, y0, z0, r){
-                var geometry = new THREE.SphereGeometry( r, 32, 32 );
+                var geometry = new THREE.SphereGeometry( r, 2, 1 );
                 var material = new THREE.MeshBasicMaterial( {color: 0xff0000} );
                 var sphere = new THREE.Mesh( geometry, material );           
                 sphere.radius = r;
@@ -937,10 +937,10 @@
                 gpuCompute.compute();
                 for(var i = 0; i < simSpeed; i++){
                     simulationStep();
-                    if(traceCount >= 800){
+                    if(traceCount >= 3600){
                         for(var i = 0; i < balls.length; i++){
                             if(balls[i].trace){
-                                traceBall(balls[i].position.x, balls[i].position.y, balls[i].position.z, 0.5);
+                                traceBall(balls[i].position.x, balls[i].position.y, balls[i].position.z, 2);
                             }
                         }
                         traceCount = 0;
