@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>FizzPACK - Gravitational Simulation </title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+        <style>
+            body {
+                background-color: #000000;
+                margin: 0px;
+                overflow: hidden;
+                font-family:Monospace;
+                font-size:13px;
+                text-align:center;
+                text-align:center;
+            }
+
+            a {
+                color:#0078ff;
+            }
+
+            #info {
+                color: #ffffff;
+                position: absolute;
+                top: 10px;
+                width: 100%;
+            }
+
+        </style>
+    </head>
+    <body>
+
+        <div id="info">
+            <a href="http://threejs.org" target="_blank">three.js</a> - <span id="waterSize"></span> webgl gpgpu water<br/>
+            Select <span id="options"></span> water size<br/>
+            Move mouse to disturb potential field.<br>
+            Press mouse button to orbit around. 'W' key toggles wireframe. //
+        </div>
+
+        <script src="libs/three.min.js"></script>
+        <script src="libs/Detector.js"></script>
+        <script src="libs/stats.min.js"></script>
+        <script src="libs/dat.gui.min.js"></script>
+        <script src="libs/OrbitControls.js"></script>
+        <script src="libs/SimplexNoise.js"></script>
+
+        <script src="libs/GPUComputationRenderer.js"></script>
+        <script src="potentials.js"></script>
+
+
+        <!-- This is the 'compute shader' for the water heightmap: -->
+        <script id="heightmapFragmentShader" type="x-shader/x-fragment">
+
+            #include <common>
+
+            uniform vec2 mousePos;
+            uniform float mouseSize;
+            uniform float viscosityConstant;
+
+            #define deltaTime ( 1.0 / 60.0 )
+            #define GRAVITY_CONSTANT ( resolution.x * deltaTime * 3.0 )
+
+            void main() {
+
+                vec2 cellSize = 1.0 / resolution.xy;
+
+                vec2 uv = gl_FragCoord.xy * cellSize;
+
+                // heightmapValue.x == height
+                // heightmapValue.y == velocity
+                // heightmapValue.z, heightmapValue.w not used
+                vec4 heightmapValue = texture2D( heightmap, uv );
+
+                // Get neighbours
+                /*
+                vec4 north = texture2D( heightmap, uv + vec2( 0.0, cellSize.y ) );
+                vec4 south = texture2D( heightmap, uv + vec2( 0.0, - cellSize.y ) );
+                vec4 east = texture2D( heightmap, uv + vec2( cellSize.x, 0.0 ) );
+                vec4 west = texture2D( heightmap, uv + vec2( - cellSize.x, 0.0 ) );
+
+                float sump = north.x + south.x + east.x + west.x - 4.0 * heightmapValue.x;
+
+                float accel = sump * GRAVITY_CONSTANT;
+                */
+                // Dynamics
+                //heightmapValue.y += accel;
+                //heightmapValue.x += 0; 
+                //heightmapValue.y * deltaTime;
+
+                // Viscosity
+                //heightmapValue.x += 0; 
+                //sump * viscosityConstant;
+
+                // Mouse influence
+                float mousePhase = clamp( length( ( uv - vec2( 0.5 ) ) * BOUNDS - vec2( mousePos.x, - mousePos.y ) ) * PI / mouseSize, 0.0, PI );
+                heightmapValue.x += cos( mousePhase ) + 1.0;
+
+                gl_FragColor = heightmapValue;
+
+            }
+
+        </script>
+
+        <script id="heightmapAddParticleShader" type="x-shader/x-fragment">
+
+            #include <common>
+            
+            // x,z,param,param
+            uniform int numPotentials; 
+            uniform vec4 potentialInfo[ 5 ];  //changed from 2 -> 5
+
+            #define deltaTime ( 1.0 / 60.0 )
+
+            const int MAX_ITERATIONS = 100;            
+
+            void main() {
+
+                vec2 cellSize = 1.0 / resolution.xy;
+
+                vec2 uv = gl_FragCoord.xy * cellSize;
+
+                vec4 heightmapValue = texture2D( heightmap, uv );
+                
+                for(int i = 0; i < MAX_ITERATIONS; i++){
+                    if (i >= numPotentials){break;}
+                    // Calculate the distance
+                    float dist = length( ( uv - vec2( 0.5 ) ) * BOUNDS - vec2( potentialInfo[i].x, - potentialInfo[i].y ) );
+                    dist = clamp(dist, potentialInfo[i].w, 3.0*BOUNDS);  
+                    // Calculate the potential
+                    float pot = - potentialInfo[i].z/dist; 
+                    // add the potential
+                    heightmapValue += pot; 
+                } 
+                // Dynamics
+                //heightmapValue.y += accel;
+                //heightmapValue.x += 0; 
+                //heightmapValue.y * deltaTime;
+
+                // Viscosity
+                //heightmapValue.x += 0; 
+                //sump * viscosityConstant;
+
+                // Mouse influence
+
+                gl_FragColor = heightmapValue;
+
+            }
+
+        </script>
+
+
+        <!-- This is just a smoothing 'compute shader' for using manually: -->
+        <script id="smoothFragmentShader" type="x-shader/x-fragment">
+
+            uniform sampler2D texture;
+
+            void main() {
+
+                vec2 cellSize = 1.0 / resolution.xy;
+
+                vec2 uv = gl_FragCoord.xy * cellSize;
+
+                // Computes the mean of texel and 4 neighbours
+                vec4 textureValue = texture2D( texture, uv );
+                textureValue += texture2D( texture, uv + vec2( 0.0, cellSize.y ) );
+                textureValue += texture2D( texture, uv + vec2( 0.0, - cellSize.y ) );
+                textureValue += texture2D( texture, uv + vec2( cellSize.x, 0.0 ) );
+                textureValue += texture2D( texture, uv + vec2( - cellSize.x, 0.0 ) );
+
+                textureValue /= 5.0;
+
+                gl_FragColor = textureValue;
+
+            }
+
+        </script>
+
+        <!-- This is the water visualization shader, copied from the MeshPhongMaterial and modified: -->
+        <script id="waterVertexShader" type="x-shader/x-vertex">
+
+            uniform sampler2D heightmap;
+
+            #define PHONG
+
+            varying vec3 vViewPosition;
+
+            #ifndef FLAT_SHADED
+
+                varying vec3 vNormal;
+
+            #endif
+
+            #include <common>
+            #include <uv_pars_vertex>
+            #include <uv2_pars_vertex>
+            #include <displacementmap_pars_vertex>
+            #include <envmap_pars_vertex>
+            #include <color_pars_vertex>
+            #include <morphtarget_pars_vertex>
+            #include <skinning_pars_vertex>
+            #include <shadowmap_pars_vertex>
+            #include <logdepthbuf_pars_vertex>
+            #include <clipping_planes_pars_vertex>
+
+            void main() {
+
+                vec2 cellSize = vec2( 1.0 / WIDTH, 1.0 / WIDTH );
+
+                #include <uv_vertex>
+                #include <uv2_vertex>
+                #include <color_vertex>
+
+                // # include <beginnormal_vertex>
+                // Compute normal from heightmap
+                vec3 objectNormal = vec3(
+                    ( texture2D( heightmap, uv + vec2( - cellSize.x, 0 ) ).x - texture2D( heightmap, uv + vec2( cellSize.x, 0 ) ).x ) * WIDTH / BOUNDS,
+                    ( texture2D( heightmap, uv + vec2( 0, - cellSize.y ) ).x - texture2D( heightmap, uv + vec2( 0, cellSize.y ) ).x ) * WIDTH / BOUNDS,
+                    1.0 );
+                //<beginnormal_vertex>
+
+                #include <morphnormal_vertex>
+                #include <skinbase_vertex>
+                #include <skinnormal_vertex>
+                #include <defaultnormal_vertex>
+
+            #ifndef FLAT_SHADED // Normal computed with derivatives when FLAT_SHADED
+
+                vNormal = normalize( transformedNormal );
+
+            #endif
+
+                //# include <begin_vertex>
+                float heightValue = texture2D( heightmap, uv ).x;
+                vec3 transformed = vec3( position.x, position.y, heightValue );
+                //<begin_vertex>
+
+                #include <displacementmap_vertex>
+                #include <morphtarget_vertex>
+                #include <skinning_vertex>
+                #include <project_vertex>
+                #include <logdepthbuf_vertex>
+                #include <clipping_planes_vertex>
+
+                vViewPosition = - mvPosition.xyz;
+
+                #include <worldpos_vertex>
+                #include <envmap_vertex>
+                #include <shadowmap_vertex>
+
+            }
+
+        </script>
+
+        <script>
+
+            if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+
+            var hash = document.location.hash.substr( 1 );
+            if ( hash ) hash = parseInt( hash, 0 );
+
+            // Texture width for simulation
+            var WIDTH = hash || 1024;
+            var NUM_TEXELS = WIDTH * WIDTH;
+
+            // Water size in system units
+            var BOUNDS = 1024;
+            var BOUNDS_HALF = BOUNDS * 0.5;
+
+            var container, stats;
+            var camera, scene, renderer, controls;
+            var mouseMoved = false;
+            var mouseCoords = new THREE.Vector2();
+            var raycaster = new THREE.Raycaster();
+
+            var waterMesh;
+            var meshRay;
+            var gpuCompute;
+            var heightmapVariable;
+            var waterUniforms;
+            var smoothShader;
+            var heightmap0; 
+            var sphere;
+            var potFunc = new GravityZeroPotential();
+            var balls = [];
+            var colfunc;
+            var traceLength;
+            var mouseClicked;
+            
+            var simSpeed = 0;
+
+            var traceCount = 0;
+            var traceArray = [];
+
+            var simplex = new SimplexNoise();
+
+            var windowHalfX = window.innerWidth / 2;
+            var windowHalfY = window.innerHeight / 2;
+
+            document.getElementById( 'waterSize' ).innerText = WIDTH + ' x ' + WIDTH;
+
+            function change(n) {
+                location.hash = n;
+                location.reload();
+                return false;
+            }
+
+
+            var options = '';
+            for ( var i = 9; i < 10; i++ ) {
+                var j = Math.pow( 2, i );
+                options += '<a href="#" onclick="return change(' + j + ')">' + j + 'x' + j + '</a> ';
+            }
+            document.getElementById('options').innerHTML = options;
+
+            init();
+            animate();
+
+            function init() {
+
+                container = document.createElement( 'div' );
+                document.body.appendChild( container );
+
+                camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 3000 );
+                camera.position.set( 0, 200, 350 );
+
+                scene = new THREE.Scene();
+
+                var sun = new THREE.DirectionalLight( 0xFFFFFF, 1.0 );
+                sun.position.set( 300, 400, 175 );
+                scene.add( sun );
+
+                var sun2 = new THREE.DirectionalLight( 0x40A040, 0.6 );
+                sun2.position.set( -100, 350, -200 );
+                scene.add( sun2 );
+
+                renderer = new THREE.WebGLRenderer();
+                renderer.setClearColor( 0x000000 );
+                renderer.setPixelRatio( window.devicePixelRatio );
+                renderer.setSize( window.innerWidth, window.innerHeight );
+                container.appendChild( renderer.domElement );
+
+                controls = new THREE.OrbitControls( camera, renderer.domElement );
+
+
+                stats = new Stats();
+                container.appendChild( stats.dom );
+
+                document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+                document.addEventListener( 'touchstart', onDocumentTouchStart, false );
+                document.addEventListener( 'touchmove', onDocumentTouchMove, false );
+
+                document.addEventListener( 'keydown', function( event ) {
+
+                    // W Pressed: Toggle wireframe
+                    if ( event.keyCode === 87 ) {
+
+                        waterMesh.material.wireframe = ! waterMesh.material.wireframe;
+                        waterMesh.material.needsUpdate = true;
+
+                    }
+
+                } , false );
+
+                window.addEventListener( 'resize', onWindowResize, false );
+
+
+                var gui = new dat.GUI();
+
+                var effectController = {
+                    mouseSize: 0.0,
+                    simSpeed: 1.0,
+                    traceLength: 20.0
+                };
+
+                var valuesChanger = function() {
+
+                    heightmapVariable.material.uniforms.mouseSize.value = effectController.mouseSize;
+                    simSpeed = effectController.simSpeed;
+                    traceLength = effectController.traceLength;
+
+                };
+
+
+                gui.add( effectController, "mouseSize", 0.0, 100.0, 1.0 ).onChange( valuesChanger );
+                gui.add( effectController, "simSpeed", 1.0, 200.0, 1.0 ).onChange( valuesChanger );
+                gui.add( effectController, "traceLength", 0.0, 100, 1.0 ).onChange( valuesChanger );
+                
+                
+                var collision_option = function(){
+                    this.Collision = false;                    
+                } ;
+                colfunc = new collision_option();
+                gui.add(colfunc, 'Collision');
+               
+
+
+                var buttonSmooth = {
+                    smoothWater: function() {
+                    smoothWater();
+                    }
+                };
+                gui.add( buttonSmooth, 'smoothWater' );
+
+               
+                var models = function() {
+                // Define models here
+                    this.well = function() { 
+                        heightmap0 = gpuCompute.createTexture();
+                        fillTexture(heightmap0,'well');
+                        gpuCompute.changeInitialValue(heightmap0);
+                        var error = gpuCompute.init();
+                        if ( error !== null ) {
+                            console.error( error );
+                        }
+                                
+                        // Create compute shader to smooth the water surface and velocity
+                        smoothShader = gpuCompute.createShaderMaterial( document.getElementById( 'smoothFragmentShader' ).textContent, { texture: { value: null } } );
+
+                        waterUniforms.heightmap.value = gpuCompute.getCurrentRenderTarget( heightmapVariable1 ).texture;
+
+                        for(var i=0; i<balls.length;i++){
+                            balls[i].parent.remove(balls[i]);
+                        };
+                        for(var i=0; i<traceArray.length;i++){
+                            traceArray[i].parent.remove(traceArray[i]);
+                        };
+                        traceArray = null;
+                        traceArray = [];
+                        balls = null;
+                        balls = [];
+                        initBall(10000, 0, 0, 0, 0, 10, 1);
+                        initBall(1000, 0, -80, 400, 0, 3, 1);
+                        initBall(1000, 0, 80, -400, 0, 3, 1);
+                        initBall(1000, -80, 0, 0, 400, 3, 1);
+                        initBall(1000, 80, 0, 0, -400, 3, 1);
+                    };
+
+                    this.zero = function() { 
+                        heightmap0 = gpuCompute.createTexture();
+                        fillTexture(heightmap0,'zero');
+                        gpuCompute.changeInitialValue(heightmap0);
+                        var error = gpuCompute.init();
+                        if ( error !== null ) {
+                            console.error( error );
+                        }
+                                
+                        // Create compute shader to smooth the water surface and velocity
+                        smoothShader = gpuCompute.createShaderMaterial( document.getElementById( 'smoothFragmentShader' ).textContent, { texture: { value: null } } );
+
+                        waterUniforms.heightmap.value = gpuCompute.getCurrentRenderTarget( heightmapVariable1 ).texture; 
+
+                        
+                        for(var i=0; i<balls.length;i++){
+                            balls[i].parent.remove(balls[i]);
+                        };
+                        for(var i=0; i<traceArray.length;i++){
+                            traceArray[i].parent.remove(traceArray[i]);
+                        };
+                        traceArray = null;
+                        traceArray = [];
+                        balls = null;
+                        balls = [];
+                        initBall(10000, 0, 0, 0, 0, 10, 1);
+                        initBall(100, 0, -80, 400, 0, 3, 1);
+                        initBall(100, 0, 80, -400, 0, 3, 1);
+                        initBall(100, -80, 0, 0, 400, 3, 1);
+                        initBall(100, 80, 0, 0, -400, 3, 1);
+                    };
+
+
+					this.negativeMassOscillation = function() { 
+                        heightmap0 = gpuCompute.createTexture();
+                        fillTexture(heightmap0,'negativeMass');
+                        gpuCompute.changeInitialValue(heightmap0);
+                        var error = gpuCompute.init();
+                        if ( error !== null ) {
+                            console.error( error );
+                        }
+                                
+                        // Create compute shader to smooth the water surface and velocity
+                        smoothShader = gpuCompute.createShaderMaterial( document.getElementById( 'smoothFragmentShader' ).textContent, { texture: { value: null } } );
+
+                        waterUniforms.heightmap.value = gpuCompute.getCurrentRenderTarget( heightmapVariable1 ).texture; 
+
+                        
+                        for(var i=0; i<balls.length;i++){
+                            balls[i].parent.remove(balls[i]);
+                        };
+                        for(var i=0; i<traceArray.length;i++){
+                            traceArray[i].parent.remove(traceArray[i]);
+                        };
+                        traceArray = null;
+                        traceArray = [];
+                        balls = null;
+                        balls = [];
+                        
+                        initBall(-10000, 0,80, -400, 0, 3, 1);
+                        initBall(-10000, 0, -80, 400, 0, 3, 1);
+                    };
+
+                };
+
+                var myModels = new models();
+                var f0 = gui.addFolder('Pre-set Models');
+                f0.add(myModels,'zero');
+                f0.add(myModels,'well');
+                f0.add(myModels,'negativeMassOscillation');
+
+                var particle_addition = function() {
+                // Define default values here
+                    this.ma = 1;
+                    this.x = 100;
+                    this.z = 100;
+                    this.vx =-100;
+                    this.vz = 100;
+                    this.r = 1;
+                    this.trace = true;
+                    this.add = function() { initBall(this.ma,this.x,this.z,this.vx,this.vz,this.r, this.trace);};
+                };
+                var particle = new particle_addition();
+                var f1 = gui.addFolder('Particle Properties');
+                f1.add(particle, 'ma');
+                f1.add(particle, 'x');
+                f1.add(particle, 'z');
+                f1.add(particle, 'vx');
+                f1.add(particle, 'vz');
+                f1.add(particle, 'r');
+                f1.add(particle, 'trace');
+                f1.add(particle, 'add');
+                gui.remember(f1);
+
+                initWater();
+                
+                //initBall(8,0,0,0,0,6);
+                //initBall(2,0,-80, 200, 0,1);
+                initBall(10000, 0, 0, 0, 0, 10, 1);
+                initBall(1000, 0, -80, -400, 0, 3, 1);
+                initBall(1000, 0, 80, +400, 0, 3, 1);
+                initBall(1000, -80, 0, 0, 400, 3, 1);
+                initBall(1000, 80, 0, 0, -400, 3, 1);
+
+                valuesChanger();
+
+            }
+            
+             function initBall(ma,x0,z0, v0x, v0z, r, trace){
+                var geometry = new THREE.SphereGeometry( r, 32, 32 );
+                var material = new THREE.MeshBasicMaterial( {color: 0xffff00} );
+                var sphere = new THREE.Mesh( geometry, material );
+                var velocity = {};
+                velocity.x = v0x;
+                velocity.z = v0z;
+                sphere.velocity = velocity;                
+                sphere.radius = r;
+                sphere.position.x = x0;
+                sphere.position.z = z0;
+                sphere.mass = ma;
+				sphere.trace = trace;
+                balls.push( sphere )
+                scene.add( sphere ); 
+            }
+            
+            function traceBall(x0, y0, z0, r){
+                var geometry = new THREE.SphereGeometry( r, 32, 32 );
+                var material = new THREE.MeshBasicMaterial( {color: 0xff0000} );
+                var sphere = new THREE.Mesh( geometry, material );           
+                sphere.radius = r;
+                sphere.position.x = x0;
+                sphere.position.y = y0;
+                sphere.position.z = z0;
+                traceArray.push( sphere );
+                while(traceArray.length>traceLength*balls.length){
+                    traceArray[0].parent.remove(traceArray[0]);
+                    traceArray.splice(0,1);
+                }
+                scene.add( sphere );             
+                
+            }
+            
+
+            function initWater() {
+
+                var materialColor = 0x0040C0;
+
+                var geometry = new THREE.PlaneBufferGeometry( BOUNDS, BOUNDS, WIDTH - 1, WIDTH -1 );
+
+                // material: make a ShaderMaterial clone of MeshPhongMaterial, with customized vertex shader
+                var material = new THREE.ShaderMaterial( {
+                    uniforms: THREE.UniformsUtils.merge( [
+                        THREE.ShaderLib[ 'phong' ].uniforms,
+                        {
+                            heightmap: { value: null }
+                        }
+                    ] ),
+                    vertexShader: document.getElementById( 'waterVertexShader' ).textContent,
+                    fragmentShader: THREE.ShaderChunk[ 'meshphong_frag' ]
+
+                } );
+
+                material.lights = true;
+
+                // Material attributes from MeshPhongMaterial
+                material.color = new THREE.Color( materialColor );
+                material.specular = new THREE.Color( 0x111111 );
+                material.shininess = 50;
+		material.transparent = true;
+                // Sets the uniforms with the material values
+                material.uniforms.diffuse.value = material.color;
+                material.uniforms.specular.value = material.specular;
+                material.uniforms.shininess.value = Math.max( material.shininess, 1e-4 );
+                material.uniforms.opacity.value = 0.35;
+
+                // Defines
+                material.defines.WIDTH = WIDTH.toFixed( 1 );
+                material.defines.BOUNDS = BOUNDS.toFixed( 1 );
+
+                waterUniforms = material.uniforms;
+
+                waterMesh = new THREE.Mesh( geometry, material );
+                waterMesh.rotation.x = - Math.PI / 2;
+                waterMesh.matrixAutoUpdate = false;
+                waterMesh.updateMatrix();
+
+                scene.add( waterMesh );
+
+                // Mesh just for mouse raycasting
+                var geometryRay = new THREE.PlaneBufferGeometry( BOUNDS, BOUNDS, 1, 1 );
+                meshRay = new THREE.Mesh( geometryRay, new THREE.MeshBasicMaterial( { color: 0xFFFFFF, visible: false } ) );
+                meshRay.rotation.x = - Math.PI / 2;
+                meshRay.matrixAutoUpdate = false;
+                meshRay.updateMatrix();
+                scene.add( meshRay );
+
+
+                // Creates the gpu computation class and sets it up
+
+                gpuCompute = new GPUComputationRenderer( WIDTH, WIDTH, renderer );
+
+                heightmap0 = gpuCompute.createTexture();
+
+                // Define GPU variables:
+                fillTexture( heightmap0 ,'zero');
+
+                heightmapVariable = gpuCompute.addVariable( "heightmap", document.getElementById( 'heightmapFragmentShader' ).textContent, heightmap0 );
+                heightmapVariable1 = gpuCompute.addVariable( "heightmap1", document.getElementById( 'heightmapAddParticleShader' ).textContent, heightmap0 );
+                
+                // Define GPU variable dependencies
+                gpuCompute.setVariableDependencies( heightmapVariable, [ heightmapVariable ] );
+                gpuCompute.setVariableDependencies( heightmapVariable1, [ heightmapVariable ] );
+                
+                // Initialize uniforms
+                heightmapVariable.material.uniforms.mousePos = { value: new THREE.Vector2( 10000, 10000 ) };
+                heightmapVariable.material.uniforms.mouseSize = { value: 20.0 };
+                heightmapVariable.material.uniforms.viscosityConstant = { value: 0.03 };
+                heightmapVariable.material.defines.BOUNDS = BOUNDS.toFixed( 1 );
+
+                
+                heightmapVariable1.material.uniforms.numPotentials = { value: 5}; //changed from 2 -> 5
+                updateUniforms();
+                heightmapVariable1.material.defines.BOUNDS = BOUNDS.toFixed( 1 );
+
+
+                var error = gpuCompute.init();
+                if ( error !== null ) {
+                    console.error( error );
+                }
+
+                // Create compute shader to smooth the water surface and velocity
+                smoothShader = gpuCompute.createShaderMaterial( document.getElementById( 'smoothFragmentShader' ).textContent, { texture: { value: null } } );
+
+                waterUniforms.heightmap.value = gpuCompute.getCurrentRenderTarget( heightmapVariable1 ).texture;
+            }
+
+            function fillTexture( texture , func) {
+
+                if(func=='zero'){
+                    var pixels = texture.image.data;
+
+                    var p = 0;
+                    for ( var j = 0; j < WIDTH; j++ ) {
+                        for ( var i = 0; i < WIDTH; i++ ) {
+                                
+                            //pixels[ p + 0 ] = noise(x,y,123.4);
+                            pixels[ p + 0 ] = 0;
+                            pixels[ p + 1 ] = 0;
+                            pixels[ p + 2 ] = 0;
+                            pixels[ p + 3 ] = 1;
+
+                            p += 4;
+                        }
+                    }
+                }
+                
+                if(func=='well'){
+                    var pixels = texture.image.data;
+
+                    var p = 0;
+                    for ( var j = 0; j < WIDTH; j++ ) {
+                        for ( var i = 0; i < WIDTH; i++ ) {
+
+                            var x = (i-WIDTH/2)/WIDTH*2;
+                            var y = (j-WIDTH/2)/WIDTH*2;
+                                
+                            //pixels[ p + 0 ] = noise(x,y,123.4);
+                            pixels[ p + 0 ] = 80*(x*x+y*y);// Math.sqrt(x*x+y*y) > 0.05 ? 200-1/Math.sqrt(x*x+y*y) : 0;
+                            pixels[ p + 1 ] = 0;
+                            pixels[ p + 2 ] = 0;
+                            pixels[ p + 3 ] = 1;
+                            p += 4;
+                        }
+                    }
+                }
+
+
+                if(func=='negativeMass'){
+                    var pixels = texture.image.data;
+
+                    var p = 0;
+                    for ( var j = 0; j < WIDTH; j++ ) {
+                        for ( var i = 0; i < WIDTH; i++ ) {
+
+                            var x = (i-WIDTH/2)/WIDTH*2;
+                            var y = (j-WIDTH/2)/WIDTH*2;
+                                
+                            //pixels[ p + 0 ] = noise(x,y,123.4);
+                            pixels[ p + 0 ] = 200*(Math.max(x,y)+Math.max(x,-1*y)+Math.max(-1*x,-1*y)+Math.max(-1*x,y)); //10*(x*x+y*y); Math.sqrt(x*x+y*y) > 0.05 ? 200-1/Math.sqrt(x*x+y*y) : 0;
+                            pixels[ p + 1 ] = 0;
+                            pixels[ p + 2 ] = 0;
+                            pixels[ p + 3 ] = 1;
+                            p += 4;
+                        }
+                    }
+                }
+            }
+
+            function smoothWater() {
+
+                var currentRenderTarget = gpuCompute.getCurrentRenderTarget( heightmapVariable );
+                var alternateRenderTarget = gpuCompute.getAlternateRenderTarget( heightmapVariable );
+
+                for ( var i = 0; i < 10; i++ ) {
+
+                    smoothShader.uniforms.texture.value = currentRenderTarget.texture;
+                    gpuCompute.doRenderTarget( smoothShader, alternateRenderTarget );
+
+                    smoothShader.uniforms.texture.value = alternateRenderTarget.texture;
+                    gpuCompute.doRenderTarget( smoothShader, currentRenderTarget );
+
+                }
+                
+            }
+
+
+            function onWindowResize() {
+
+                windowHalfX = window.innerWidth / 2;
+                windowHalfY = window.innerHeight / 2;
+
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+
+                renderer.setSize( window.innerWidth, window.innerHeight );
+
+            }
+
+            function setMouseCoords( x, y ) {
+
+                mouseCoords.set( ( x / renderer.domElement.clientWidth ) * 2 - 1, - ( y / renderer.domElement.clientHeight ) * 2 + 1 );
+                mouseMoved = true;
+
+            }
+
+            function onDocumentMouseMove( event ) {
+
+                setMouseCoords( event.clientX, event.clientY );
+
+            }
+
+            function setMouseClick( x, y ) {
+
+                mouseCoords.set( ( x / renderer.domElement.clientWidth ) * 2 - 1, - ( y / renderer.domElement.clientHeight ) * 2 + 1 );
+                mouseClicked = true;
+
+            }
+
+            function onDocumentMouseUp( event ) {
+
+                setMouseClick( event.clientX, event.clientY );
+
+            }
+
+            function onDocumentTouchStart( event ) {
+
+                if ( event.touches.length === 1 ) {
+
+                    event.preventDefault();
+
+                    setMouseCoords( event.touches[ 0 ].pageX, event.touches[ 0 ].pageY );
+
+
+                }
+
+            }
+
+            function onDocumentTouchMove( event ) {
+
+                if ( event.touches.length === 1 ) {
+
+                    event.preventDefault();
+
+                    setMouseCoords( event.touches[ 0 ].pageX, event.touches[ 0 ].pageY );
+
+
+                }
+
+            }
+
+            function animate() {
+
+                requestAnimationFrame( animate );
+               
+                render();
+                stats.update();
+            }
+
+            function simulationStep(){
+
+            	forceStep();
+                
+                var temp_fx, temp_fz;
+                var temp_x, temp_z;
+                var scale = 1000;
+                var dt = 0.00005;
+                // precision
+                var epsilon = 0.001;
+                var potentialGrid = heightmap0.image.data;
+                
+                for (var count=0; count < balls.length; count++){
+                    
+                    var bx = balls[count].position.x;
+                    var bz = balls[count].position.z;
+                    var Udx = -(potFunc.potential(balls, {x:bx+epsilon, z:bz})-potFunc.potential(balls, {x:bx, z:bz}))/epsilon;  
+                    var Udz = -(potFunc.potential(balls, {x:bx, z:bz+epsilon})-potFunc.potential(balls, {x:bx, z:bz}))/epsilon;  
+
+                    balls[count].velocity.x = balls[count].velocity.x + Udx*dt*scale;
+                    balls[count].velocity.z = balls[count].velocity.z + Udz*dt*scale;
+
+                    balls[count].position.x =  balls[count].position.x + balls[count].velocity.x*dt;
+                    balls[count].position.z =  balls[count].position.z + balls[count].velocity.z*dt;       
+
+
+                /*
+
+                    temp_x = Math.floor(balls[count].position.x) + BOUNDS/2;
+                    temp_z = Math.floor(balls[count].position.z) + BOUNDS/2;
+
+                    p0 = ((temp_z*BOUNDS)+temp_x)*4;
+                    pz = (((temp_z+1)*BOUNDS)+temp_x)*4; 
+                    px = ((temp_z*BOUNDS)+(temp_x+1))*4;
+                    //console.log(temp_x) 
+                    var temp_pot = getPotentialTile(temp_x, temp_z);
+                    //console.log(temp_pot); 
+                    temp_fx = temp_pot[2]-temp_pot[3]; //potentialGrid[p0]-potentialGrid[px];
+                    temp_fz = temp_pot[3]-temp_pot[1]; //potentialGrid[p0]-potentialGrid[pz];
+
+                    temp_fx = temp_fx*scale;                    
+                    temp_fz = temp_fz*scale;
+
+                    balls[count].velocity.x = balls[count].velocity.x + temp_fx*dt;
+                    balls[count].velocity.z = balls[count].velocity.z + temp_fz*dt;
+
+                    balls[count].position.x =  balls[count].position.x + balls[count].velocity.x*dt;
+                    balls[count].position.z =  balls[count].position.z + balls[count].velocity.z*dt;       
+
+                    balls[count].position.y =  potentialGrid[p0];
+                */
+                }
+            }
+
+            function calcAngularMom(){
+                
+                var sum = 0;
+                
+                for(var i = 0; i < balls.length; i++){
+                    var temp = (balls[i].position.x * balls[i].mass * balls[i].velocity.z) - (balls[i].position.z * balls[i].mass * balls[i].velocity.x);
+                    sum += temp;
+                }
+                
+                return sum;
+                
+            }
+
+            function forceStep(){
+                var temp_fx;
+                var temp_fz;
+                var scale = 256;
+                var rx,rz,r;
+
+                for(var i = 0; i < balls.length; i++){
+                    for(var j = i+1; j < balls.length; j++){
+                       
+                        rx = (balls[i].position.x - balls[j].position.x);
+                        rz = (balls[i].position.z - balls[j].position.z);
+                        r = Math.sqrt(rx*rx + rz*rz);
+                        R_s = balls[i].radius + balls[j].radius;
+                        //Gravitational Force
+                        
+                        if(r>R_s){
+                            /*temp_fx = rx/(r*r*r);
+                            temp_fz = rz/(r*r*r);
+
+
+                            balls[i].velocity.x = balls[i].velocity.x - balls[j].mass*temp_fx*scale;
+                            balls[i].velocity.z = balls[i].velocity.z - balls[j].mass*temp_fz*scale;
+
+                            balls[j].velocity.x = balls[j].velocity.x + balls[i].mass*temp_fx*scale;
+                            balls[j].velocity.z = balls[j].velocity.z + balls[i].mass*temp_fz*scale;
+                            */
+                        }else if (colfunc.Collision){
+                            var v1x, v1y, v2x,v2y,m1,m2;
+
+                            v1x = balls[i].velocity.x;
+                            v1y = balls[i].velocity.z;
+                            m1 = balls[i].mass;
+
+                            v2x = balls[j].velocity.x;
+                            v2y = balls[j].velocity.z;
+                            m2 = balls[j].mass;
+
+                            balls[i].velocity.x = v1x - 2*m2*((v1y-v2y)*rz+rx*(v1x-v2x))*rx/(m1+m2)/(r*r);
+                            balls[i].velocity.z = v1y - 2*m2*((v1y-v2y)*rz+rx*(v1x-v2x))*rz/(m1+m2)/(r*r);
+                            
+                            balls[j].velocity.x = v2x + 2*m1*((v1y-v2y)*rz+rx*(v1x-v2x))*rx/(m1+m2)/(r*r);
+                            balls[j].velocity.z = v2y + 2*m1*((v1y-v2y)*rz+rx*(v1x-v2x))*rz/(m1+m2)/(r*r);
+                            
+                            balls[i].position.x = balls[j].position.x+R_s*rx/r ;
+                            balls[i].position.z = balls[j].position.z+R_s*rz/r ;
+                            
+                
+                        }
+
+                        
+
+                    }
+                }
+            }
+            
+            function getPotentialTile(x, y){
+                // Returns 4 length array of the potential at the specified point
+                y = BOUNDS - y;
+                var buf = new Float32Array(2*2*4);
+                gpuCompute.getOutput(x, y, 2, 2, buf);
+                var out = []; 
+                for(var i = 0; i < 2*2; i++){
+                    out.push(buf[i*4]);
+                }
+                return out;
+            }          
+            
+            var renderCount = 0;
+            function render() {
+                
+                // Set uniforms: mouse interaction
+                var uniforms = heightmapVariable.material.uniforms;
+                if ( mouseMoved ) {
+
+                    this.raycaster.setFromCamera( mouseCoords, camera );
+
+                    var intersects = this.raycaster.intersectObject( meshRay );
+
+                    if ( intersects.length > 0 ) {
+                        var point = intersects[ 0 ].point;
+                        uniforms.mousePos.value.set( point.x, point.z );
+
+                    }
+                    else {
+                        uniforms.mousePos.value.set( 10000, 10000 );
+                    }
+
+                    mouseMoved = false;
+                }
+                else {
+                    uniforms.mousePos.value.set( 10000, 10000 );
+                }
+
+                // Do the gpu computation
+                gpuCompute.compute();
+                for(var i = 0; i < simSpeed; i++){
+                    simulationStep();
+                    if(traceCount >= 800){
+                        for(var i = 0; i < balls.length; i++){
+                            if(balls[i].trace){
+                                traceBall(balls[i].position.x, balls[i].position.y, balls[i].position.z, 0.5);
+                            }
+                        }
+                        traceCount = 0;
+                    }
+                    ++traceCount;
+                }
+                updateUniforms(); 
+                // Get compute output in custom uniform
+                // var val = gpuCompute.getCurrentRenderTarget( heightmapVariable1 );
+                /*
+
+                console.log('20, 500')
+                console.log(getPotentialTile(20, 500));
+                console.log('500, 500')
+                console.log(getPotentialTile(500, 500));
+                console.log('500, 20')
+                console.log(getPotentialTile(500, 20));
+                console.log('20, 20')
+                console.log(getPotentialTile(20, 20));
+                */
+                // Render
+                
+                
+                
+                renderer.render( scene, camera );
+                renderCount = 0;
+
+                //console.log(val[0])
+                ++renderCount;
+            }
+            function updateUniforms(){
+                var potentials = [];
+                for (var i = 0; i < balls.length; i++){
+                        potentials.push(new THREE.Vector4( balls[i].position.x,balls[i].position.z,balls[i].mass, balls[i].radius ));   
+                }
+                while(potentials.length < heightmapVariable1.material.uniforms.numPotentials.value){
+                    potentials.push(new THREE.Vector4( 0.0, 0.0, 0.0, 0.0 ));   
+                }
+                heightmapVariable1.material.uniforms.potentialInfo = { value: potentials.slice(0)};
+            }
+        </script>
+    </body>
+</html>
