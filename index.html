@@ -404,9 +404,10 @@
                
                 var models = function() {
                 // Define models here
-                    this.well = function() { 
+                    this.oscillation = function() { 
                         heightmap0 = gpuCompute.createTexture();
-                        fillTexture(heightmap0,'well');
+
+                        fillTexture(heightmap0,'oscillation');
                         gpuCompute.changeInitialValue(heightmap0);
                         var error = gpuCompute.init();
                         if ( error !== null ) {
@@ -418,6 +419,7 @@
 
                         waterUniforms.heightmap.value = gpuCompute.getCurrentRenderTarget( heightmapVariable1 ).texture;
 
+
                         for(var i=0; i<balls.length;i++){
                             balls[i].parent.remove(balls[i]);
                         };
@@ -428,10 +430,6 @@
                         traceArray = [];
                         balls = null;
                         balls = [];
-                        initBall(10000, 0, 0, 0, 0, 10, 1);
-                        initBall(1000, 0, -80, 400, 0, 3, 1);
-                        initBall(1000, 0, 80, -400, 0, 3, 1);
-                        initBall(1000, -80, 0, 0, 400, 3, 1);
                         initBall(1000, 80, 0, 0, -400, 3, 1);
                     };
 
@@ -503,7 +501,7 @@
                 var myModels = new models();
                 var f0 = gui.addFolder('Pre-set Models');
                 f0.add(myModels,'zero');
-                f0.add(myModels,'well');
+                f0.add(myModels,'oscillation');
                 f0.add(myModels,'negativeMassOscillation');
 
                 var particle_addition = function() {
@@ -689,9 +687,13 @@
                             p += 4;
                         }
                     }
+
+                     potFunc.staticPot = function(position){
+                        return 0; 
+                    }
                 }
                 
-                if(func=='well'){
+                if(func=='oscillation'){
                     var pixels = texture.image.data;
 
                     var p = 0;
@@ -702,12 +704,19 @@
                             var y = (j-WIDTH/2)/WIDTH*2;
                                 
                             //pixels[ p + 0 ] = noise(x,y,123.4);
-                            pixels[ p + 0 ] = 80*(x*x+y*y);// Math.sqrt(x*x+y*y) > 0.05 ? 200-1/Math.sqrt(x*x+y*y) : 0;
+                            pixels[ p + 0 ] = 80.0*(x*x+y*y);// Math.sqrt(x*x+y*y) > 0.05 ? 200-1/Math.sqrt(x*x+y*y) : 0;
                             pixels[ p + 1 ] = 0;
                             pixels[ p + 2 ] = 0;
                             pixels[ p + 3 ] = 1;
                             p += 4;
                         }
+                    }
+
+
+                    potFunc.staticPot = function(position){
+                        var x = position.x;
+                        var z = position.z;
+                        return 80.0*(x*x+z*z); 
                     }
                 }
 
@@ -723,12 +732,18 @@
                             var y = (j-WIDTH/2)/WIDTH*2;
                                 
                             //pixels[ p + 0 ] = noise(x,y,123.4);
-                            pixels[ p + 0 ] = 200*(Math.max(x,y)+Math.max(x,-1*y)+Math.max(-1*x,-1*y)+Math.max(-1*x,y)); //10*(x*x+y*y); Math.sqrt(x*x+y*y) > 0.05 ? 200-1/Math.sqrt(x*x+y*y) : 0;
+                            pixels[ p + 0 ] = 200*(Math.max(x,y)+Math.max(x,-1*y)+Math.max(-1*x,-1*y)+Math.max(-1*x,y)-4); //10*(x*x+y*y); Math.sqrt(x*x+y*y) > 0.05 ? 200-1/Math.sqrt(x*x+y*y) : 0;
                             pixels[ p + 1 ] = 0;
                             pixels[ p + 2 ] = 0;
                             pixels[ p + 3 ] = 1;
                             p += 4;
                         }
+                    }
+
+                    potFunc.staticPot = function(position){
+                        var x = position.x;
+                        var z = position.z;
+                        return 200*(Math.max(x,y)+Math.max(x,-1*y)+Math.max(-1*x,-1*y)+Math.max(-1*x,y)-4); 
                     }
                 }
             }
