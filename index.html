@@ -987,6 +987,15 @@
                 gpuCompute.compute();
                 for(var i = 0; i < simSpeed; i++){
                     simulationStep();
+                    if(traceCount >= 800){
+                        for(var i = 0; i < balls.length; i++){
+                            if(balls[i].trace){
+                                traceBall(balls[i].position.x, balls[i].position.y, balls[i].position.z, 0.5);
+                            }
+                        }
+                        traceCount = 0;
+                    }
+                    ++traceCount;
                 }
                 updateUniforms(); 
                 // Get compute output in custom uniform
@@ -1004,20 +1013,12 @@
                 */
                 // Render
                 
-                if(traceCount >= 20){
-					for(var i = 0; i < balls.length; i++){
-						if(balls[i].trace){
-							traceBall(balls[i].position.x, balls[i].position.y, balls[i].position.z, 0.5);
-						}
-					}
-                    traceCount = 0;
-                }
+                
                 
                 renderer.render( scene, camera );
                 renderCount = 0;
 
                 //console.log(val[0])
-                ++traceCount;
                 ++renderCount;
             }
             function updateUniforms(){
