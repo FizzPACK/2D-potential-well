@@ -45,6 +45,7 @@
         <script src="libs/SimplexNoise.js"></script>
 
         <script src="libs/GPUComputationRenderer.js"></script>
+        <script src="potentials.js"></script>
 
 
         <!-- This is the 'compute shader' for the water heightmap: -->
@@ -279,6 +280,7 @@
             var smoothShader;
             var heightmap0; 
             var sphere;
+            var potFunc = new GravityZeroPotential();
             var balls = [];
             var colfunc;
             var traceLength;
@@ -380,7 +382,7 @@
 
 
                 gui.add( effectController, "mouseSize", 0.0, 100.0, 1.0 ).onChange( valuesChanger );
-                gui.add( effectController, "simSpeed", 1.0, 40.0, 1.0 ).onChange( valuesChanger );
+                gui.add( effectController, "simSpeed", 1.0, 200.0, 1.0 ).onChange( valuesChanger );
                 gui.add( effectController, "traceLength", 0.0, 100, 1.0 ).onChange( valuesChanger );
                 
                 
@@ -427,10 +429,10 @@
                         balls = null;
                         balls = [];
                         initBall(10000, 0, 0, 0, 0, 10, 1);
-                        initBall(1, 0, -80, 400, 0, 3, 1);
-                        initBall(1, 0, 80, -400, 0, 3, 1);
-                        initBall(1, -80, 0, 0, 400, 3, 1);
-                        initBall(1, 80, 0, 0, -400, 3, 1);
+                        initBall(1000, 0, -80, 400, 0, 3, 1);
+                        initBall(1000, 0, 80, -400, 0, 3, 1);
+                        initBall(1000, -80, 0, 0, 400, 3, 1);
+                        initBall(1000, 80, 0, 0, -400, 3, 1);
                     };
 
                     this.zero = function() { 
@@ -459,10 +461,10 @@
                         balls = null;
                         balls = [];
                         initBall(10000, 0, 0, 0, 0, 10, 1);
-                        initBall(1, 0, -80, 400, 0, 3, 1);
-                        initBall(1, 0, 80, -400, 0, 3, 1);
-                        initBall(1, -80, 0, 0, 400, 3, 1);
-                        initBall(1, 80, 0, 0, -400, 3, 1);
+                        initBall(100, 0, -80, 400, 0, 3, 1);
+                        initBall(100, 0, 80, -400, 0, 3, 1);
+                        initBall(100, -80, 0, 0, 400, 3, 1);
+                        initBall(100, 80, 0, 0, -400, 3, 1);
                     };
 
 
@@ -532,10 +534,10 @@
                 //initBall(8,0,0,0,0,6);
                 //initBall(2,0,-80, 200, 0,1);
                 initBall(10000, 0, 0, 0, 0, 10, 1);
-                initBall(1, 0, -80, 400, 0, 3, 1);
-                initBall(1, 0, 80, -400, 0, 3, 1);
-                initBall(1, -80, 0, 0, 400, 3, 1);
-                initBall(1, 80, 0, 0, -400, 3, 1);
+                initBall(1000, 0, -80, -400, 0, 3, 1);
+                initBall(1000, 0, 80, +400, 0, 3, 1);
+                initBall(1000, -80, 0, 0, 400, 3, 1);
+                initBall(1000, 80, 0, 0, -400, 3, 1);
 
                 valuesChanger();
 
@@ -828,10 +830,27 @@
                 var temp_fx, temp_fz;
                 var temp_x, temp_z;
                 var scale = 1000;
-                var dt = 0.0005;
+                var dt = 0.00005;
+                // precision
+                var epsilon = 0.001;
                 var potentialGrid = heightmap0.image.data;
-
+                
                 for (var count=0; count < balls.length; count++){
+                    
+                    var bx = balls[count].position.x;
+                    var bz = balls[count].position.z;
+                    var Udx = -(potFunc.potential(balls, {x:bx+epsilon, z:bz})-potFunc.potential(balls, {x:bx, z:bz}))/epsilon;  
+                    var Udz = -(potFunc.potential(balls, {x:bx, z:bz+epsilon})-potFunc.potential(balls, {x:bx, z:bz}))/epsilon;  
+
+                    balls[count].velocity.x = balls[count].velocity.x + Udx*dt*scale;
+                    balls[count].velocity.z = balls[count].velocity.z + Udz*dt*scale;
+
+                    balls[count].position.x =  balls[count].position.x + balls[count].velocity.x*dt;
+                    balls[count].position.z =  balls[count].position.z + balls[count].velocity.z*dt;       
+
+
+                /*
+
                     temp_x = Math.floor(balls[count].position.x) + BOUNDS/2;
                     temp_z = Math.floor(balls[count].position.z) + BOUNDS/2;
 
@@ -853,7 +872,8 @@
                     balls[count].position.x =  balls[count].position.x + balls[count].velocity.x*dt;
                     balls[count].position.z =  balls[count].position.z + balls[count].velocity.z*dt;       
 
-                    balls[count].position.y =  potentialGrid[p0];       
+                    balls[count].position.y =  potentialGrid[p0];
+                */
                 }
             }
 
@@ -965,7 +985,9 @@
 
                 // Do the gpu computation
                 gpuCompute.compute();
-                simulationStep();
+                for(var i = 0; i < simSpeed; i++){
+                    simulationStep();
+                }
                 updateUniforms(); 
                 // Get compute output in custom uniform
                 // var val = gpuCompute.getCurrentRenderTarget( heightmapVariable1 );
@@ -991,10 +1013,8 @@
                     traceCount = 0;
                 }
                 
-                if (renderCount >= simSpeed){
-                    renderer.render( scene, camera );
-                    renderCount = 0;
-                }
+                renderer.render( scene, camera );
+                renderCount = 0;
 
                 //console.log(val[0])
                 ++traceCount;
