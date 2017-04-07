@@ -31,10 +31,9 @@
     <body>
 
         <div id="info">
-            <a href="http://threejs.org" target="_blank">three.js</a> - <span id="waterSize"></span> webgl gpgpu water<br/>
-            Select <span id="options"></span> water size<br/>
-            Move mouse to disturb potential field.<br>
-            Press mouse button to orbit around. 'W' key toggles wireframe. //
+            <a href="http://threejs.org" target="_blank">three.js</a> - <span id="waterSize"></span> webgl gpgpu potential<br/>
+            FIZZ-PACK N-Particle Potential Simulator<br/>
+            Press 'W' key toggles wireframe.
         </div>
 
         <script src="libs/three.min.js"></script>
@@ -322,7 +321,6 @@
                 var j = Math.pow( 2, i );
                 options += '<a href="#" onclick="return change(' + j + ')">' + j + 'x' + j + '</a> ';
             }
-            document.getElementById('options').innerHTML = options;
 
             init();
             animate();
