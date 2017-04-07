@@ -31,10 +31,9 @@
     <body>
 
         <div id="info">
-            <a href="http://threejs.org" target="_blank">three.js</a> - <span id="waterSize"></span> webgl gpgpu water<br/>
-            Select <span id="options"></span> water size<br/>
-            Move mouse to disturb potential field.<br>
-            Press mouse button to orbit around. 'W' key toggles wireframe. //
+            <a href="http://threejs.org" target="_blank">three.js</a> - <span id="waterSize"></span> webgl gpgpu potential<br/>
+            FIZZ-PACK N-Particle Potential Simulator<br/>
+            Press 'W' key toggles wireframe.
         </div>
 
         <script src="libs/three.min.js"></script>
@@ -322,7 +321,6 @@
                 var j = Math.pow( 2, i );
                 options += '<a href="#" onclick="return change(' + j + ')">' + j + 'x' + j + '</a> ';
             }
-            document.getElementById('options').innerHTML = options;
 
             init();
             animate();
@@ -444,6 +442,88 @@
                         balls = null;
                         balls = [];
                         initBall(1000, 80, 0, 0, -400, 3, 1);
+                        colfunc.Collision = false;
+                        effectController.simSpeed = 2.0;
+                        simSpeed=effectController.simSpeed;
+                        for (var i in gui.__controllers) {
+                            gui.__controllers[i].updateDisplay();
+                        }
+                    };
+
+                    this.accelerateAssist = function() { 
+                        potFunc = new GravityZeroPotential(); 
+                        heightmapVariable1.material.uniforms.potentialID = { value: 0}; 
+                        heightmap0 = gpuCompute.createTexture();
+
+                        fillTexture(heightmap0,'zero');
+                        gpuCompute.changeInitialValue(heightmap0);
+                        var error = gpuCompute.init();
+                        if ( error !== null ) {
+                            console.error( error );
+                        }
+                                
+                        // Create compute shader to smooth the water surface and velocity
+                        smoothShader = gpuCompute.createShaderMaterial( document.getElementById( 'smoothFragmentShader' ).textContent, { texture: { value: null } } );
+
+                        waterUniforms.heightmap.value = gpuCompute.getCurrentRenderTarget( heightmapVariable1 ).texture;
+
+
+                        for(var i=0; i<balls.length;i++){
+                            balls[i].parent.remove(balls[i]);
+                        };
+                        for(var i=0; i<traceArray.length;i++){
+                            traceArray[i].parent.remove(traceArray[i]);
+                        };
+                        traceArray = null;
+                        traceArray = [];
+                        balls = null;
+                        balls = [];
+                        initBall(10000, 0, 800, 0, -200, 10, 1);
+                        initBall(1, 50, 200, 10, 0, 3, 1);
+                        colfunc.Collision = false;
+                        effectController.simSpeed = 100.0;
+                        simSpeed=effectController.simSpeed;
+                        for (var i in gui.__controllers) {
+                            gui.__controllers[i].updateDisplay();
+                        }
+                    };
+
+                    this.decelerateAssist = function() { 
+                        potFunc = new GravityZeroPotential(); 
+                        heightmapVariable1.material.uniforms.potentialID = { value: 0}; 
+                        heightmap0 = gpuCompute.createTexture();
+
+                        fillTexture(heightmap0,'zero');
+                        gpuCompute.changeInitialValue(heightmap0);
+                        var error = gpuCompute.init();
+                        if ( error !== null ) {
+                            console.error( error );
+                        }
+                                
+                        // Create compute shader to smooth the water surface and velocity
+                        smoothShader = gpuCompute.createShaderMaterial( document.getElementById( 'smoothFragmentShader' ).textContent, { texture: { value: null } } );
+
+                        waterUniforms.heightmap.value = gpuCompute.getCurrentRenderTarget( heightmapVariable1 ).texture;
+
+
+                        for(var i=0; i<balls.length;i++){
+                            balls[i].parent.remove(balls[i]);
+                        };
+                        for(var i=0; i<traceArray.length;i++){
+                            traceArray[i].parent.remove(traceArray[i]);
+                        };
+                        traceArray = null;
+                        traceArray = [];
+                        balls = null;
+                        balls = [];
+                        initBall(10000, 0, 800, 0, -600, 10, 1);
+                        initBall(1, 350, 400, -350, -350, 3, 1);
+                        colfunc.Collision = false;
+                        effectController.simSpeed = 100.0;
+                        simSpeed=effectController.simSpeed;
+                        for (var i in gui.__controllers) {
+                            gui.__controllers[i].updateDisplay();
+                        }
                     };
 
                     this.moons = function() { 
@@ -775,11 +855,15 @@
                 f0.add(myModels,'initial');
                 f0.add(myModels,'oscillation');
                 f0.add(myModels,'moons');
+
                 f0.add(myModels,'negativeMass');
-                f0.add(myModels,'atomswarm');
-                f0.add(myModels,'dualatom');
+                f0.add(myModels,'accelerateAssist');
+                f0.add(myModels,'decelerateAssist');
                 f0.add(myModels,'dualstar');
                 f0.add(myModels,'solostar');
+
+                f0.add(myModels,'atomswarm');
+                f0.add(myModels,'dualatom');
                 f0.add(myModels,'oscpotential');
 
                 var particle_addition = function() {
