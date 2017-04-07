@@ -107,6 +107,8 @@
             
             // x,z,param,param
             uniform int numPotentials; 
+            uniform int potentialID; 
+            uniform float time; 
             uniform vec4 potentialInfo[ 30 ];  //changed from 2 -> 5
 
             #define deltaTime ( 1.0 / 60.0 )
@@ -120,17 +122,26 @@
                 vec2 uv = gl_FragCoord.xy * cellSize;
 
                 vec4 heightmapValue = texture2D( heightmap, uv );
-                
                 for(int i = 0; i < MAX_ITERATIONS; i++){
                     if (i >= numPotentials){break;}
                     // Calculate the distance
-                    float dist = length( ( uv - vec2( 0.5 ) ) * BOUNDS - vec2( potentialInfo[i].x, - potentialInfo[i].y ) );
-                    dist = clamp(dist, potentialInfo[i].w, 3.0*BOUNDS);  
+                    float dist = (length( ( uv - vec2( 0.5 ) ) * BOUNDS - vec2( potentialInfo[i].x, - potentialInfo[i].y ) ))/2.0;
                     // Calculate the potential
-                    float pot = - potentialInfo[i].z/dist; 
+                    float pot = 0.0;
+                    if(potentialID == 0){
+                        dist = clamp(dist, potentialInfo[i].w, 3.0*BOUNDS);  
+                        pot = - potentialInfo[i].z/dist; 
+                    }
+                    if(potentialID == 1){
+                        dist = clamp(dist, potentialInfo[i].w, 3.0*BOUNDS);  
+                        pot = - potentialInfo[i].z/dist + potentialInfo[i].z/dist/dist*10.0; 
+                    }
                     // add the potential
                     heightmapValue += pot; 
                 } 
+                if(potentialID == 2){ 
+                    heightmapValue += 50.0*sin((uv.x-0.5)*BOUNDS/20.0+2.0*time);
+                }
                 // Dynamics
                 //heightmapValue.y += accel;
                 //heightmapValue.x += 0; 
@@ -259,7 +270,7 @@
             if ( hash ) hash = parseInt( hash, 0 );
 
             // Texture width for simulation
-            var WIDTH = hash || 1024;
+            var WIDTH = 512; //hash || 1024;
             var NUM_TEXELS = WIDTH * WIDTH;
 
             // Water size in system units
@@ -280,7 +291,7 @@
             var smoothShader;
             var heightmap0; 
             var sphere;
-            var potFunc = new GravityZeroPotential();
+            var potFunc = new AtomZeroPotential();
             var balls = [];
             var colfunc;
             var traceLength;
@@ -288,6 +299,7 @@
             
             var simSpeed = 0;
 
+            var time = 0;
             var traceCount = 0;
             var traceArray = [];
 
@@ -380,14 +392,13 @@
 
                 };
 
-
                 gui.add( effectController, "mouseSize", 0.0, 100.0, 1.0 ).onChange( valuesChanger );
                 gui.add( effectController, "simSpeed", 1.0, 500.0, 1.0 ).onChange( valuesChanger );
-                gui.add( effectController, "traceLength", 0.0, 100, 1.0 ).onChange( valuesChanger );
+                gui.add( effectController, "traceLength", 1.0, 100, 1.0 ).onChange( valuesChanger );
                 
                 
                 var collision_option = function(){
-                    this.Collision = true;                    
+                    this.Collision = false;                    
                 } ;
                 colfunc = new collision_option();
                 gui.add(colfunc, 'Collision');
@@ -405,6 +416,8 @@
                 var models = function() {
                 // Define models here
                     this.oscillation = function() { 
+                        potFunc = new GravityZeroPotential(); 
+                        heightmapVariable1.material.uniforms.potentialID = { value: 0}; 
                         heightmap0 = gpuCompute.createTexture();
 
                         fillTexture(heightmap0,'oscillation');
@@ -434,6 +447,8 @@
                     };
 
                     this.moons = function() { 
+                        potFunc = new GravityZeroPotential(); 
+                        heightmapVariable1.material.uniforms.potentialID = { value: 0}; 
                         heightmap0 = gpuCompute.createTexture();
                         fillTexture(heightmap0,'zero');
                         gpuCompute.changeInitialValue(heightmap0);
@@ -477,8 +492,9 @@
                         }
 
                     };
-
                     this.initial = function() { 
+                        potFunc = new GravityZeroPotential(); 
+                        heightmapVariable1.material.uniforms.potentialID = { value: 0}; 
                         heightmap0 = gpuCompute.createTexture();
                         fillTexture(heightmap0,'zero');
                         gpuCompute.changeInitialValue(heightmap0);
@@ -515,11 +531,103 @@
                            gui.__controllers[i].updateDisplay();
                         }
 
-                valuesChanger();
+                        valuesChanger();
                     };
 
+                    this.dualstar = function() { 
+                        potFunc = new GravityZeroPotential(); 
+                        heightmapVariable1.material.uniforms.potentialID = { value: 0}; 
+                        heightmap0 = gpuCompute.createTexture();
+                        fillTexture(heightmap0,'zero');
+                        gpuCompute.changeInitialValue(heightmap0);
+                        var error = gpuCompute.init();
+                        if ( error !== null ) {
+                            console.error( error );
+                        }
+                                
+                        // Create compute shader to smooth the water surface and velocity
+                        smoothShader = gpuCompute.createShaderMaterial( document.getElementById( 'smoothFragmentShader' ).textContent, { texture: { value: null } } );
+
+                        waterUniforms.heightmap.value = gpuCompute.getCurrentRenderTarget( heightmapVariable1 ).texture; 
+
+                        
+                        for(var i=0; i<balls.length;i++){
+                            balls[i].parent.remove(balls[i]);
+                        };
+                        for(var i=0; i<traceArray.length;i++){
+                            traceArray[i].parent.remove(traceArray[i]);
+                        };
+                        traceArray = null;
+                        traceArray = [];
+                        balls = null;
+                        balls = [];
+                        initBall(10000, 0, 100, -100, 0, 10, 1);
+                        initBall(10000, 0, -100, 100, 0, 10, 1);
+                        //initBall(5000, 86.602, -50, 50*2, 86.602*2,10, 1);
+                        //initBall(5000, -86.602, -50, 86.602*2, -50*2, 10, 1);
+                        //initBall(10, 0, -200, -200, 0, 2, 1);
+                        //initBall(10, +100, 0, 0, -200, 2, 1);
+                        for(var i =0; i < 10; ++i){
+                            initBall(0, 0, 370+i*5 , -210, 0, 2, 1);
+                        }
+                        colfunc.Collision = false;
+                        effectController.simSpeed = 10.0;
+                        simSpeed=effectController.simSpeed;
+                        for (var i in gui.__controllers) {
+                           gui.__controllers[i].updateDisplay();
+                        }
+
+                        valuesChanger();
+                    };
+
+                    this.solostar = function() { 
+                        potFunc = new GravityZeroPotential(); 
+                        heightmapVariable1.material.uniforms.potentialID = { value: 0}; 
+                        heightmap0 = gpuCompute.createTexture();
+                        fillTexture(heightmap0,'zero');
+                        gpuCompute.changeInitialValue(heightmap0);
+                        var error = gpuCompute.init();
+                        if ( error !== null ) {
+                            console.error( error );
+                        }
+                                
+                        // Create compute shader to smooth the water surface and velocity
+                        smoothShader = gpuCompute.createShaderMaterial( document.getElementById( 'smoothFragmentShader' ).textContent, { texture: { value: null } } );
+
+                        waterUniforms.heightmap.value = gpuCompute.getCurrentRenderTarget( heightmapVariable1 ).texture; 
+
+                        
+                        for(var i=0; i<balls.length;i++){
+                            balls[i].parent.remove(balls[i]);
+                        };
+                        for(var i=0; i<traceArray.length;i++){
+                            traceArray[i].parent.remove(traceArray[i]);
+                        };
+                        traceArray = null;
+                        traceArray = [];
+                        balls = null;
+                        balls = [];
+                        initBall(20000, 0, 0, 0, 0, 10, 1);
+                        //initBall(5000, 86.602, -50, 50*2, 86.602*2,10, 1);
+                        //initBall(5000, -86.602, -50, 86.602*2, -50*2, 10, 1);
+                        //initBall(10, 0, -200, -200, 0, 2, 1);
+                        //initBall(10, +100, 0, 0, -200, 2, 1);
+                        for(var i =0; i < 10; ++i){
+                            initBall(0, 0, 370+i*5 , -210, 0, 2, 1);
+                        }
+                        colfunc.Collision = false;
+                        effectController.simSpeed = 10.0;
+                        simSpeed=effectController.simSpeed;
+                        for (var i in gui.__controllers) {
+                           gui.__controllers[i].updateDisplay();
+                        }
+
+                        valuesChanger();
+                    };
 
 					this.negativeMassOscillation = function() { 
+                        potFunc = new GravityZeroPotential(); 
+                        heightmapVariable1.material.uniforms.potentialID = { value: 0}; 
                         heightmap0 = gpuCompute.createTexture();
                         fillTexture(heightmap0,'negativeMass');
                         gpuCompute.changeInitialValue(heightmap0);
@@ -549,6 +657,117 @@
                         initBall(-37.5, 0, -50, 0, 0.1, 3, 1);
                     };
 
+                    this.atomswarm = function() { 
+                        potFunc = new AtomZeroPotential(); 
+                        heightmapVariable1.material.uniforms.potentialID = { value: 1}; 
+                        heightmap0 = gpuCompute.createTexture();
+                        fillTexture(heightmap0,'box');
+                        gpuCompute.changeInitialValue(heightmap0);
+                        var error = gpuCompute.init();
+                        if ( error !== null ) {
+                            console.error( error );
+                        }
+                                
+                        // Create compute shader to smooth the water surface and velocity
+                        smoothShader = gpuCompute.createShaderMaterial( document.getElementById( 'smoothFragmentShader' ).textContent, { texture: { value: null } } );
+
+                        waterUniforms.heightmap.value = gpuCompute.getCurrentRenderTarget( heightmapVariable1 ).texture; 
+
+                       
+                        for(var i=0; i<balls.length;i++){
+                            balls[i].parent.remove(balls[i]);
+                        };
+
+                        for(var i=0; i<traceArray.length;i++){
+                            traceArray[i].parent.remove(traceArray[i]);
+                        };
+                        
+                        traceArray = null;
+                        traceArray = [];
+                        balls = null;
+                        balls = [];
+
+                        for(var i = 0; i < 10; ++i){
+                            initBall(4000, (i%2)*10, (i%5)*10, 200, 200, 10, 1);
+                        }
+                    };
+
+                    this.dualatom = function() { 
+                        potFunc = new AtomZeroPotential(); 
+                        heightmapVariable1.material.uniforms.potentialID = { value: 1}; 
+                        heightmap0 = gpuCompute.createTexture();
+                        fillTexture(heightmap0,'box');
+                        gpuCompute.changeInitialValue(heightmap0);
+                        var error = gpuCompute.init();
+                        if ( error !== null ) {
+                            console.error( error );
+                        }
+                                
+                        // Create compute shader to smooth the water surface and velocity
+                        smoothShader = gpuCompute.createShaderMaterial( document.getElementById( 'smoothFragmentShader' ).textContent, { texture: { value: null } } );
+
+                        waterUniforms.heightmap.value = gpuCompute.getCurrentRenderTarget( heightmapVariable1 ).texture; 
+
+                       
+                        for(var i=0; i<balls.length;i++){
+                            balls[i].parent.remove(balls[i]);
+                        };
+
+                        for(var i=0; i<traceArray.length;i++){
+                            traceArray[i].parent.remove(traceArray[i]);
+                        };
+                        
+                        traceArray = null;
+                        traceArray = [];
+                        balls = null;
+                        balls = [];
+
+                        initBall(5000, -20, 0, 0, 15, 10, 1);
+                        initBall(5000, 20, 0, 0, -15, 10, 1);
+                    };
+
+                    this.oscpotential = function() { 
+                        potFunc = new SinPotential(); 
+                        heightmapVariable1.material.uniforms.potentialID = { value: 2}; 
+                        heightmap0 = gpuCompute.createTexture();
+                        fillTexture(heightmap0,'zero');
+                        gpuCompute.changeInitialValue(heightmap0);
+                        var error = gpuCompute.init();
+                        if ( error !== null ) {
+                            console.error( error );
+                        }
+                                
+                        // Create compute shader to smooth the water surface and velocity
+                        smoothShader = gpuCompute.createShaderMaterial( document.getElementById( 'smoothFragmentShader' ).textContent, { texture: { value: null } } );
+
+                        waterUniforms.heightmap.value = gpuCompute.getCurrentRenderTarget( heightmapVariable1 ).texture; 
+
+                        
+                        for(var i=0; i<balls.length;i++){
+                            balls[i].parent.remove(balls[i]);
+                        };
+                        for(var i=0; i<traceArray.length;i++){
+                            traceArray[i].parent.remove(traceArray[i]);
+                        };
+                        traceArray = null;
+                        traceArray = [];
+                        balls = null;
+                        balls = [];
+                        for(var i =0; i < 30; ++i){
+                            initBall(0, -370, 370+i*5 , 50+15*i, 0, 2, 1);
+                        }
+                        colfunc.Collision = false;
+                        effectController.simSpeed = 1.0;
+                        simSpeed=effectController.simSpeed;
+                        for (var i in gui.__controllers) {
+                           gui.__controllers[i].updateDisplay();
+                        }
+
+                        valuesChanger();
+                    };
+
+
+
                 };
 
                 var myModels = new models();
@@ -557,6 +776,11 @@
                 f0.add(myModels,'oscillation');
                 f0.add(myModels,'moons');
                 f0.add(myModels,'negativeMassOscillation');
+                f0.add(myModels,'atomswarm');
+                f0.add(myModels,'dualatom');
+                f0.add(myModels,'dualstar');
+                f0.add(myModels,'solostar');
+                f0.add(myModels,'oscpotential');
 
                 var particle_addition = function() {
                 // Define default values here
@@ -582,7 +806,7 @@
                 gui.remember(f1);
 
                 initWater();
-                
+                potFunc = new GravityZeroPotential(); 
                 initBall(10000, 0, 0, 0, 0, 10, 1);
                 initBall(10, 0, -200, -200, 0, 2, 1);
                 initBall(10, +100, 0, 0, -200, 2, 1);
@@ -596,11 +820,10 @@
                 }
 
                 valuesChanger();
-
             }
             
              function initBall(ma,x0,z0, v0x, v0z, r, trace){
-                var geometry = new THREE.SphereGeometry( r, 32, 32 );
+                var geometry = new THREE.SphereGeometry( r, 8, 8 );
                 var material = new THREE.MeshBasicMaterial( {color: 0xffff00} );
                 var sphere = new THREE.Mesh( geometry, material );
                 var velocity = {};
@@ -617,7 +840,7 @@
             }
             
             function traceBall(x0, y0, z0, r){
-                var geometry = new THREE.SphereGeometry( r, 32, 32 );
+                var geometry = new THREE.SphereGeometry( r, 1, 1 );
                 var material = new THREE.MeshBasicMaterial( {color: 0xff0000} );
                 var sphere = new THREE.Mesh( geometry, material );           
                 sphere.radius = r;
@@ -713,6 +936,8 @@
 
                 
                 heightmapVariable1.material.uniforms.numPotentials = { value: 30}; //changed from 2 -> 5
+                heightmapVariable1.material.uniforms.potentialID = { value: 0}; 
+                heightmapVariable1.material.uniforms.time = { value: 0}; 
                 updateUniforms();
                 heightmapVariable1.material.defines.BOUNDS = BOUNDS.toFixed( 1 );
 
@@ -733,22 +958,22 @@
                 if(func=='zero'){
                     var pixels = texture.image.data;
 
+                    potFunc.staticPot = function(position){return 0;};
                     var p = 0;
                     for ( var j = 0; j < WIDTH; j++ ) {
                         for ( var i = 0; i < WIDTH; i++ ) {
-                                
+ 
+                            var x = (i-WIDTH/2);
+                            var z = (j-WIDTH/2);
+
                             //pixels[ p + 0 ] = noise(x,y,123.4);
-                            pixels[ p + 0 ] = 0;
+                            pixels[ p + 0 ] = potFunc.staticPot({x: x, z: z});
                             pixels[ p + 1 ] = 0;
                             pixels[ p + 2 ] = 0;
                             pixels[ p + 3 ] = 1;
 
                             p += 4;
                         }
-                    }
-
-                     potFunc.staticPot = function(position){
-                        return 0; 
                     }
                 }
                 
@@ -798,12 +1023,37 @@
                             p += 4;
                         }
                     }
-
                     potFunc.staticPot = function(position){
 
                         var x = position.x;//(i-WIDTH/2)/WIDTH*2;
                         var z = position.z;//(j-WIDTH/2)/WIDTH*2;
                         return 0.001*(x*x+z*z);//200*(Math.max(x,y)+Math.max(x,-1*y)+Math.max(-1*x,-1*y)+Math.max(-1*x,y)-4); 
+                    }
+                }
+
+                if( func == 'box' ){
+                    var pixels = texture.image.data;
+
+                    potFunc.staticPot = function(position){
+                        var Ux = Math.max(0,(Math.abs(position.x)-500))*10;
+                        var Uz = Math.max(0,(Math.abs(position.z)-500))*10;
+                        return Ux + Uz;
+                    }
+
+                    var p = 0;
+                    for ( var j = 0; j < WIDTH; j++ ) {
+                        for ( var i = 0; i < WIDTH; i++ ) {
+
+                            var x = (i-WIDTH/2)*BOUNDS/WIDTH;
+                            var z = (j-WIDTH/2)*BOUNDS/WIDTH;
+                                
+                            //pixels[ p + 0 ] = noise(x,y,123.4);
+                            pixels[ p + 0 ] = potFunc.staticPot({x:x, z:z}) 
+                            pixels[ p + 1 ] = 0;
+                            pixels[ p + 2 ] = 0;
+                            pixels[ p + 3 ] = 1;
+                            p += 4;
+                        }
                     }
                 }
             }
@@ -897,7 +1147,7 @@
                 render();
                 stats.update();
             }
-
+            
             function simulationStep(){
 
             	forceStep();
@@ -906,6 +1156,7 @@
                 var temp_x, temp_z;
                 var scale = 1000;
                 var dt = 0.00005;
+                time += dt;
                 // precision
                 var epsilon = 0.001;
                 var potentialGrid = heightmap0.image.data;
@@ -914,8 +1165,8 @@
                     
                     var bx = balls[count].position.x;
                     var bz = balls[count].position.z;
-                    var Udx = -(potFunc.potential(balls, {x:bx+epsilon, z:bz})-potFunc.potential(balls, {x:bx, z:bz}))/epsilon;  
-                    var Udz = -(potFunc.potential(balls, {x:bx, z:bz+epsilon})-potFunc.potential(balls, {x:bx, z:bz}))/epsilon;  
+                    var Udx = -(potFunc.potential(balls, {x:bx+epsilon, z:bz, t:time})-potFunc.potential(balls, {x:bx, z:bz, t:time}))/epsilon;  
+                    var Udz = -(potFunc.potential(balls, {x:bx, z:bz+epsilon, t:time})-potFunc.potential(balls, {x:bx, z:bz, t:time}))/epsilon;  
 
                     balls[count].velocity.x = balls[count].velocity.x + Udx*dt*scale;
                     balls[count].velocity.z = balls[count].velocity.z + Udz*dt*scale;
@@ -1062,6 +1313,15 @@
                 gpuCompute.compute();
                 for(var i = 0; i < simSpeed; i++){
                     simulationStep();
+                    if(traceCount >= 1500){
+                        for(var i = 0; i < balls.length; i++){
+                            if(balls[i].trace){
+                                traceBall(balls[i].position.x, balls[i].position.y, balls[i].position.z, 1.5);
+                            }
+                        }
+                        traceCount = 0;
+                    }
+                    ++traceCount;
                 }
                 updateUniforms(); 
                 // Get compute output in custom uniform
@@ -1078,7 +1338,8 @@
                 console.log(getPotentialTile(20, 20));
                 */
                 // Render
-                
+               
+               /* 
                 if(traceCount >= 20){
 					for(var i = 0; i < balls.length; i++){
 						if(balls[i].trace){
@@ -1087,7 +1348,7 @@
 					}
                     traceCount = 0;
                 }
-                
+               */ 
                 renderer.render( scene, camera );
                 renderCount = 0;
 
@@ -1100,10 +1361,12 @@
                 for (var i = 0; i < balls.length; i++){
                         potentials.push(new THREE.Vector4( balls[i].position.x,balls[i].position.z,balls[i].mass, balls[i].radius ));   
                 }
-                while(potentials.length < heightmapVariable1.material.uniforms.numPotentials.value){
+                while(potentials.length < 30){
                     potentials.push(new THREE.Vector4( 0.0, 0.0, 0.0, 0.0 ));   
                 }
                 heightmapVariable1.material.uniforms.potentialInfo = { value: potentials.slice(0)};
+                heightmapVariable1.material.uniforms.numPotentials.value = balls.length;
+                heightmapVariable1.material.uniforms.time.value = time;
             }
         </script>
     </body>
