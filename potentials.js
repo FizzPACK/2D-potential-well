@@ -35,6 +35,18 @@ function AtomZeroPotential(){
         return this.atomConst*pot;
     }
 }
+function SinPotential(){
+    this.atomConst = 150;
+    this.pushConst = 10.0;
+    this.staticPot = function(position){
+        return 0; 
+    }
+    this.potential = function(balls, position){
+        var pot = this.staticPot(position);
+        pot += Math.sin(position.x/20+position.t*2);//Math.sin(position.x/50)*Math.sin(position.t);
+        return this.atomConst*pot;
+    }
+}
 // HELPER Functions
 function calcXZDist(position1, position2){
     var xdist = (position1.x-position2.x);
