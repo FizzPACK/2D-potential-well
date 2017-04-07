@@ -17,11 +17,11 @@ function GravityZeroPotential(){
 }
 function AtomZeroPotential(){
     this.atomConst = 1;
-    this.pushConst = 15.0;
+    this.pushConst = 10.0;
     this.staticPot = function(position){
-        var Ux = Math.max(0,Math.abs(position.x)-240)*100;
-        var Uz = Math.max(0,Math.abs(position.z)-240)*100;
-        return Ux+Uz; 
+        var Ux = Math.max(0,(Math.abs(position.x)-240))*10;
+        var Uz = Math.max(0,(Math.abs(position.z)-240))*10;
+        return Ux + Uz; 
     }
     this.potential = function(balls, position){
         var pot = this.staticPot(position);
