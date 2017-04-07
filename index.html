@@ -108,6 +108,7 @@
             uniform int numPotentials; 
             uniform int potentialID; 
             uniform float time; 
+            uniform float repulsion; 
             uniform vec4 potentialInfo[ 30 ];  //changed from 2 -> 5
 
             #define deltaTime ( 1.0 / 60.0 )
@@ -133,7 +134,7 @@
                     }
                     if(potentialID == 1){
                         dist = clamp(dist, potentialInfo[i].w, 3.0*BOUNDS);  
-                        pot = - potentialInfo[i].z/dist + potentialInfo[i].z/dist/dist*10.0; 
+                        pot = - potentialInfo[i].z/dist + potentialInfo[i].z/dist/dist*repulsion; 
                     }
                     // add the potential
                     heightmapValue += pot; 
@@ -293,8 +294,10 @@
             var potFunc = new AtomZeroPotential();
             var balls = [];
             var colfunc;
+            var constfunc;
             var traceLength;
             var mouseClicked;
+            var repulsion = 0;
             
             var simSpeed = 0;
 
@@ -379,7 +382,8 @@
                 var effectController = {
                     mouseSize: 0.0,
                     simSpeed: 10.0,
-                    traceLength: 20.0
+                    traceLength: 20.0,
+                    repulsion: 10.0
                 };
 
                 var valuesChanger = function() {
@@ -387,12 +391,14 @@
                     heightmapVariable.material.uniforms.mouseSize.value = effectController.mouseSize;
                     simSpeed = effectController.simSpeed;
                     traceLength = effectController.traceLength;
+                    repulsion = effectController.repulsion;
 
                 };
 
                 gui.add( effectController, "mouseSize", 0.0, 100.0, 1.0 ).onChange( valuesChanger );
                 gui.add( effectController, "simSpeed", 1.0, 500.0, 1.0 ).onChange( valuesChanger );
                 gui.add( effectController, "traceLength", 1.0, 100, 1.0 ).onChange( valuesChanger );
+                gui.add( effectController, "repulsion", 1.0, 50, 1.0 ).onChange( valuesChanger );
                 
                 
                 var collision_option = function(){
@@ -400,7 +406,7 @@
                 } ;
                 colfunc = new collision_option();
                 gui.add(colfunc, 'Collision');
-               
+
 
 
                 var buttonSmooth = {
@@ -409,6 +415,30 @@
                     }
                 };
                 gui.add( buttonSmooth, 'smoothWater' );
+
+                var buttonAddEnergy = {
+                    addenergy: function() {
+                        for(var i = 0; i < balls.length; i++){
+                            balls[i].velocity.x *= 1.10;
+                            balls[i].velocity.y *= 1.10;
+                            balls[i].velocity.x += (Math.random()-0.5)*15;
+                            balls[i].velocity.y += (Math.random()-0.5)*15;
+                            balls[i].velocity.x += (Math.random()-0.5)*15;
+                            balls[i].velocity.y += (Math.random()-0.5)*15;
+                        } 
+                    }
+                };
+                gui.add( buttonAddEnergy, 'addenergy' );
+
+                var buttonReduceEnergy = {
+                    reduceenergy: function() {
+                        for(var i = 0; i < balls.length; i++){
+                            balls[i].velocity.x *= 0.85;
+                            balls[i].velocity.y *= 0.85;
+                        } 
+                    }
+                };
+                gui.add( buttonReduceEnergy, 'reduceenergy' );
 
                
                 var models = function() {
@@ -802,8 +832,13 @@
                         balls = null;
                         balls = [];
 
-                        initBall(5000, -20, 0, 0, 15, 10, 1);
-                        initBall(5000, 20, 0, 0, -15, 10, 1);
+                        initBall(25000, -20, 0, 0, 15, 10, 1);
+                        //initBall(5000, 20, 0, 0, -15, 10, 1);
+                        initBall(0, 80, 0, 0, 0, 2, 1);
+                        initBall(0, 40, 0, 0, 0, 2, 1);
+                        initBall(0, 20, 0, 0, 0, 2, 1);
+                        initBall(0, 10, 0, 0, 0, 2, 1);
+                        initBall(0, 60, 0, 0, 0, 2, 1);
                     };
 
                     this.oscpotential = function() { 
@@ -1022,6 +1057,7 @@
                 heightmapVariable1.material.uniforms.numPotentials = { value: 30}; //changed from 2 -> 5
                 heightmapVariable1.material.uniforms.potentialID = { value: 0}; 
                 heightmapVariable1.material.uniforms.time = { value: 0}; 
+                heightmapVariable1.material.uniforms.repulsion = { value: 20}; 
                 updateUniforms();
                 heightmapVariable1.material.defines.BOUNDS = BOUNDS.toFixed( 1 );
 
@@ -1451,6 +1487,8 @@
                 heightmapVariable1.material.uniforms.potentialInfo = { value: potentials.slice(0)};
                 heightmapVariable1.material.uniforms.numPotentials.value = balls.length;
                 heightmapVariable1.material.uniforms.time.value = time;
+                heightmapVariable1.material.uniforms.repulsion.value = repulsion;
+                potFunc.pushConst = repulsion;
             }
         </script>
     </body>

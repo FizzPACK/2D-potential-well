@@ -1,5 +1,6 @@
 function GravityZeroPotential(){
     this.gravConst = 1;
+    this.pushConst = 20.0;
     this.staticPot = function(position){
         return 0; 
     }
